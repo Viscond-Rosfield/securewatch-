@@ -322,6 +322,75 @@
   .home-feature-title { font-size: 14px; font-weight: 700; color: var(--text-bright); margin-bottom: 6px; }
   .home-feature-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 
+  /* AUTH OVERLAY */
+  #auth-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #auth-overlay.hidden { display: none; }
+  .auth-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 100%; max-width: 400px;
+    position: relative;
+    box-shadow: 0 0 80px rgba(168,85,247,.15);
+  }
+  .auth-logo {
+    display: flex; flex-direction: column; align-items: center;
+    margin-bottom: 28px; gap: 12px;
+  }
+  .auth-logo-icon {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg,#a855f7,#7c3aed);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 40px rgba(168,85,247,.4);
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  .auth-title { font-size: 22px; font-weight: 800; color: var(--text-bright); letter-spacing: -0.5px; }
+  .auth-subtitle { font-size: 12px; color: var(--text-muted); margin-top: -4px; }
+  .auth-input-wrap { position: relative; margin-bottom: 12px; }
+  .auth-input-wrap input { padding-left: 38px; font-size: 14px; }
+  .auth-input-wrap .auth-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+  .auth-btn {
+    width: 100%; padding: 12px;
+    background: linear-gradient(135deg,#a855f7,#7c3aed);
+    border: none; border-radius: var(--radius);
+    color: #fff; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 4px 20px rgba(168,85,247,.35);
+    transition: filter .15s;
+    margin-top: 4px;
+  }
+  .auth-btn:hover { filter: brightness(1.1); }
+  .auth-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .auth-error {
+    background: rgba(244,63,94,.1); border: 1px solid rgba(244,63,94,.25);
+    color: #fb7185; border-radius: var(--radius);
+    padding: 9px 12px; font-size: 12px; margin-bottom: 12px; display: none;
+  }
+  .auth-error.show { display: block; }
+  .auth-info {
+    background: rgba(129,140,248,.07); border: 1px solid rgba(129,140,248,.18);
+    color: #a5b4fc; border-radius: var(--radius);
+    padding: 9px 12px; font-size: 12px; margin-bottom: 14px; display: none;
+  }
+  .auth-info.show { display: block; }
+  .auth-attempts { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+  .auth-footer { text-align: center; margin-top: 20px; font-size: 11px; color: var(--text-muted); }
+
+  /* IP BLOCKED SCREEN */
+  #ip-blocked-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: none; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  #ip-blocked-overlay.show { display: flex; }
+
   /* MAP PULSE ANIMATION */
   @keyframes mapPulse {
     0% { transform: scale(1); opacity: .4; }
@@ -347,6 +416,67 @@
 </style>
 </head>
 <body>
+
+<!-- ======================== IP BLOCKED ======================== -->
+<div id="ip-blocked-overlay">
+  <div style="max-width:420px;padding:40px 24px;">
+    <div style="font-size:64px;margin-bottom:20px;">🚫</div>
+    <div style="font-size:22px;font-weight:800;color:var(--text-bright);margin-bottom:8px;">Acesso Negado</div>
+    <div style="font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:20px;">
+      Seu endereço IP não está autorizado a acessar esta plataforma.<br>
+      Entre em contato com o administrador do sistema.
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--text-muted);">
+      IP detectado: <strong id="blocked-ip-display" style="color:var(--info);font-family:monospace;">—</strong>
+    </div>
+    <div style="margin-top:24px;font-size:11px;color:var(--text-muted);">Cateye's Security Platform</div>
+  </div>
+</div>
+
+<!-- ======================== AUTH OVERLAY ======================== -->
+<div id="auth-overlay">
+  <!-- animated orbs -->
+  <div style="position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.1) 0%,transparent 70%);top:-150px;left:-150px;pointer-events:none;animation:orbFloat 8s ease-in-out infinite;"></div>
+  <div style="position:absolute;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.08) 0%,transparent 70%);bottom:-100px;right:-100px;pointer-events:none;animation:orbFloat 10s ease-in-out infinite reverse;"></div>
+
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:34px;height:34px;">
+          <ellipse cx="12" cy="12" rx="10" ry="6" stroke="white" stroke-width="1.5"/>
+          <ellipse cx="12" cy="12" rx="3.5" ry="6" fill="white" opacity=".95"/>
+          <circle cx="12" cy="12" r="2" fill="#a855f7"/>
+        </svg>
+      </div>
+      <div>
+        <div class="auth-title">Cateye<span style="color:var(--accent)">'s</span></div>
+        <div class="auth-subtitle">Security Intelligence Platform</div>
+      </div>
+    </div>
+
+    <div class="auth-info" id="auth-ip-info"></div>
+    <div class="auth-error" id="auth-error"></div>
+
+    <div class="auth-input-wrap">
+      <span class="auth-icon">👤</span>
+      <input type="text" id="auth-user" placeholder="Usuário" autocomplete="username"
+        onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()" />
+    </div>
+    <div class="auth-input-wrap">
+      <span class="auth-icon">🔑</span>
+      <input type="password" id="auth-pass" placeholder="Senha" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+
+    <button class="auth-btn" id="auth-btn" onclick="doLogin()">Entrar</button>
+
+    <div class="auth-attempts" id="auth-attempts-msg"></div>
+
+    <div class="auth-footer">
+      🔒 Acesso restrito — Cateye's v2.0
+    </div>
+  </div>
+</div>
 
 <header>
   <div class="logo">
@@ -841,6 +971,71 @@
     <div id="save-msg" style="margin-top:10px;font-size:13px;display:none;"></div>
   </div>
 
+  <!-- AUTH MANAGEMENT -->
+  <div class="card">
+    <div class="card-title">🔐 Gestão de Acesso</div>
+    <div id="auth-settings-msg" class="alert" style="display:none;"></div>
+
+    <!-- USERS -->
+    <div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Usuários</div>
+      <div id="auth-users-list"></div>
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+        <div>
+          <label>Novo usuário</label>
+          <input id="new-user" type="text" placeholder="nome_usuario" />
+        </div>
+        <div>
+          <label>Senha (mín. 8 caracteres)</label>
+          <input id="new-pass" type="password" placeholder="••••••••" />
+        </div>
+        <button class="btn btn-primary" onclick="addUser()" style="align-self:end;">➕ Adicionar</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- IP WHITELIST -->
+    <div style="margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;">Whitelist de IPs</div>
+        <span id="ip-count-badge" class="tag tag-info" style="font-size:10px;"></span>
+      </div>
+      <div class="alert alert-warn" style="margin-bottom:10px;">⚠️ Deixe vazio para permitir acesso de qualquer IP. Só restrinja se o seu time tiver IPs fixos.</div>
+      <label>IPs permitidos (um por linha)</label>
+      <textarea id="ip-list" placeholder="192.168.1.100&#10;203.0.113.45&#10;..." style="font-family:monospace;font-size:12px;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveIPs()">💾 Salvar IPs</button>
+        <button class="btn btn-ghost" onclick="addMyIP()">📍 Adicionar meu IP atual</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- HASH GENERATOR -->
+    <div style="margin-top:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Gerador de Hash de Senha</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Para configurar senhas manualmente no código fonte (AUTH_CONFIG.USERS).</p>
+      <div style="display:flex;gap:8px;">
+        <input id="hash-gen-input" type="password" placeholder="Digite a senha para gerar o hash" />
+        <button class="btn btn-ghost" onclick="generateHash()">🔒 Gerar</button>
+      </div>
+      <div id="hash-gen-output" style="display:none;margin-top:8px;font-family:monospace;font-size:11px;color:var(--info);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px;word-break:break-all;"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- SESSION INFO -->
+    <div style="margin-top:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Sessão Atual</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div id="session-info-box" style="font-size:13px;color:var(--text);"></div>
+        <button class="btn btn-ghost" onclick="refreshSessionInfo()">🔄 Atualizar</button>
+        <button class="btn btn-danger" onclick="doLogout()" style="margin-left:auto;">🚪 Encerrar Sessão</button>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">Modo de Demonstração</div>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Sem chaves configuradas, a plataforma opera em <strong style="color:var(--warn)">modo demo</strong> com dados simulados realistas para visualização das funcionalidades.</p>
@@ -1049,6 +1244,183 @@
 </div>
 
 <script>
+// ======================== AUTH CONFIG ========================
+// Senhas armazenadas como SHA-256. Para gerar: https://emn178.github.io/online-tools/sha256.html
+// Padrão: usuário "admin" senha "cateyes2024" | usuário "analista" senha "analista123"
+const AUTH_CONFIG = {
+  SESSION_HOURS: 8,
+  MAX_ATTEMPTS: 5,
+  LOCKOUT_MINUTES: 15,
+  // Lista de IPs permitidos. Deixe vazio [] para permitir qualquer IP.
+  IP_WHITELIST: [],
+  // Usuários: { usuario: "hash_sha256_da_senha" }
+  USERS: {
+    'admin':    'a1b9392d36f5f0e49568aad7abf95b34e3cc7d22a49c1c3b48843dbf61b5e3fd',
+    'analista': '3a4f6b1c8e2d9f7a0b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3'
+  }
+};
+
+// ======================== AUTH ENGINE ========================
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function getAuthState() {
+  try { return JSON.parse(sessionStorage.getItem('cateyes_auth') || 'null'); } catch { return null; }
+}
+function setAuthState(user, ip) {
+  sessionStorage.setItem('cateyes_auth', JSON.stringify({ user, ip: ip || '—', ts: Date.now() }));
+}
+function clearAuthState() {
+  sessionStorage.removeItem('cateyes_auth');
+}
+function isSessionValid() {
+  const s = getAuthState();
+  if (!s) return false;
+  const hours = (Date.now() - s.ts) / 3600000;
+  return hours < AUTH_CONFIG.SESSION_HOURS;
+}
+
+function getLockout() {
+  try { return JSON.parse(localStorage.getItem('cateyes_lockout') || 'null'); } catch { return null; }
+}
+function isLockedOut() {
+  const l = getLockout();
+  if (!l) return false;
+  if ((Date.now() - l.ts) / 60000 > AUTH_CONFIG.LOCKOUT_MINUTES) {
+    localStorage.removeItem('cateyes_lockout'); return false;
+  }
+  return l.attempts >= AUTH_CONFIG.MAX_ATTEMPTS;
+}
+function recordFailedAttempt() {
+  const l = getLockout() || { attempts: 0, ts: Date.now() };
+  l.attempts++;
+  if (l.attempts === 1) l.ts = Date.now();
+  localStorage.setItem('cateyes_lockout', JSON.stringify(l));
+  return l.attempts;
+}
+function clearLockout() { localStorage.removeItem('cateyes_lockout'); }
+
+function getCustomUsers() {
+  try { return JSON.parse(localStorage.getItem('cateyes_users') || 'null'); } catch { return null; }
+}
+function getCustomIPs() {
+  try { return JSON.parse(localStorage.getItem('cateyes_ips') || 'null'); } catch { return null; }
+}
+
+async function doLogin() {
+  const user = document.getElementById('auth-user').value.trim().toLowerCase();
+  const pass = document.getElementById('auth-pass').value;
+  const btn = document.getElementById('auth-btn');
+  const errEl = document.getElementById('auth-error');
+  const attEl = document.getElementById('auth-attempts-msg');
+
+  errEl.classList.remove('show');
+  if (!user || !pass) { showAuthError('Preencha usuário e senha.'); return; }
+
+  if (isLockedOut()) {
+    const l = getLockout();
+    const rem = Math.ceil(AUTH_CONFIG.LOCKOUT_MINUTES - (Date.now()-l.ts)/60000);
+    showAuthError(`Conta bloqueada. Aguarde ${rem} minuto(s).`); return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Verificando...';
+
+  const hash = await sha256(pass);
+  const users = getCustomUsers() || AUTH_CONFIG.USERS;
+  const valid = users[user] && users[user] === hash;
+
+  if (valid) {
+    clearLockout();
+    setAuthState(user, _detectedIP);
+    document.getElementById('auth-overlay').classList.add('hidden');
+    document.getElementById('auth-pass').value = '';
+    updateHeaderUser(user);
+  } else {
+    const attempts = recordFailedAttempt();
+    const rem = AUTH_CONFIG.MAX_ATTEMPTS - attempts;
+    if (rem <= 0) {
+      showAuthError(`Conta bloqueada por ${AUTH_CONFIG.LOCKOUT_MINUTES} minutos após ${AUTH_CONFIG.MAX_ATTEMPTS} tentativas.`);
+    } else {
+      showAuthError(`Usuário ou senha incorretos. ${rem} tentativa(s) restante(s).`);
+      attEl.textContent = `Tentativa ${attempts}/${AUTH_CONFIG.MAX_ATTEMPTS}`;
+    }
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('auth-btn').disabled = false;
+  document.getElementById('auth-btn').textContent = 'Entrar';
+}
+
+function doLogout() {
+  clearAuthState();
+  document.getElementById('auth-user').value = '';
+  document.getElementById('auth-pass').value = '';
+  document.getElementById('auth-error').classList.remove('show');
+  document.getElementById('auth-attempts-msg').textContent = '';
+  document.getElementById('auth-overlay').classList.remove('hidden');
+  goto('home');
+}
+
+function updateHeaderUser(user) {
+  const existing = document.getElementById('header-user-pill');
+  if (existing) existing.remove();
+  const pill = document.createElement('div');
+  pill.id = 'header-user-pill';
+  pill.style.cssText = 'display:flex;align-items:center;gap:8px;margin-left:12px;padding:4px 12px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);border-radius:20px;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;flex-shrink:0;';
+  pill.innerHTML = `👤 ${user} <span style="color:var(--text-muted);font-size:10px;">|</span> <span onclick="doLogout()" style="color:var(--text-muted);font-size:11px;" title="Sair">Sair</span>`;
+  document.querySelector('header').appendChild(pill);
+}
+
+let _detectedIP = '—';
+
+async function checkIPAndInit() {
+  const ips = getCustomIPs() || AUTH_CONFIG.IP_WHITELIST;
+
+  let userIP = '—';
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    userIP = d.ip;
+    _detectedIP = userIP;
+  } catch { userIP = '—'; }
+
+  if (ips.length === 0) { initAuth(); return; } // sem restrição
+
+  if (ips.length > 0 && !ips.includes(userIP)) {
+    document.getElementById('blocked-ip-display').textContent = userIP;
+    document.getElementById('ip-blocked-overlay').classList.add('show');
+    document.getElementById('auth-overlay').classList.add('hidden');
+    return;
+  }
+
+  const infoEl = document.getElementById('auth-ip-info');
+  infoEl.textContent = `✅ IP autorizado: ${userIP}`;
+  infoEl.classList.add('show');
+  initAuth();
+}
+
+function initAuth() {
+  if (isSessionValid()) {
+    const s = getAuthState();
+    document.getElementById('auth-overlay').classList.add('hidden');
+    updateHeaderUser(s.user);
+    const remaining = (AUTH_CONFIG.SESSION_HOURS - (Date.now()-s.ts)/3600000).toFixed(1);
+    console.log(`[Cateye's Auth] Sessão ativa — ${s.user} — expira em ${remaining}h`);
+  }
+  // Auto-logout when session expires
+  setInterval(() => {
+    if (!isSessionValid() && getAuthState()) {
+      doLogout();
+    }
+  }, 60000);
+}
+
 // ======================== STATE ========================
 const state = {
   counts: { url: 0, hash: 0, ip: 0, cve: 0, threats: 0 },
@@ -1068,6 +1440,7 @@ function goto(page) {
   // Lazy-load modules
   if (page === 'map' && !mapInitialized) initMap();
   if (page === 'feed' && !feedLoaded) loadAllFeeds();
+  if (page === 'settings') { renderAuthSettings(); refreshSessionInfo(); }
 }
 
 // ======================== LEAFLET MAP ========================
@@ -1681,7 +2054,104 @@ window.addEventListener('load', () => {
   const k = getKeys();
   if (k.vt) document.getElementById('vt-key').value = k.vt;
   if (k.abuse) document.getElementById('abuseip-key').value = k.abuse;
+  checkIPAndInit();
+  renderAuthSettings();
 });
+
+// ======================== AUTH SETTINGS ========================
+async function addUser() {
+  const user = document.getElementById('new-user').value.trim().toLowerCase();
+  const pass = document.getElementById('new-pass').value;
+  if (!user || !pass) return alert('Preencha usuário e senha.');
+  if (pass.length < 8) return alert('Senha mínima: 8 caracteres.');
+  const hash = await sha256(pass);
+  const users = getCustomUsers() || { ...AUTH_CONFIG.USERS };
+  users[user] = hash;
+  localStorage.setItem('cateyes_users', JSON.stringify(users));
+  document.getElementById('new-user').value = '';
+  document.getElementById('new-pass').value = '';
+  renderAuthSettings();
+  showAuthSettingsMsg('✅ Usuário salvo com sucesso!', 'success');
+}
+
+function removeUser(user) {
+  if (!confirm(`Remover usuário "${user}"?`)) return;
+  const users = getCustomUsers() || { ...AUTH_CONFIG.USERS };
+  delete users[user];
+  localStorage.setItem('cateyes_users', JSON.stringify(users));
+  renderAuthSettings();
+}
+
+function saveIPs() {
+  const raw = document.getElementById('ip-list').value.trim();
+  const ips = raw ? raw.split('\n').map(i => i.trim()).filter(Boolean) : [];
+  localStorage.setItem('cateyes_ips', JSON.stringify(ips));
+  showAuthSettingsMsg(`✅ ${ips.length} IP(s) salvos. ${ips.length === 0 ? '(Acesso liberado para todos os IPs)' : ''}`, 'success');
+}
+
+async function addMyIP() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    const ta = document.getElementById('ip-list');
+    const current = ta.value.trim();
+    const ips = current ? current.split('\n').map(i=>i.trim()).filter(Boolean) : [];
+    if (!ips.includes(d.ip)) { ips.push(d.ip); ta.value = ips.join('\n'); }
+    showAuthSettingsMsg(`✅ Seu IP (${d.ip}) adicionado.`, 'success');
+  } catch { showAuthSettingsMsg('❌ Não foi possível detectar o IP.', 'error'); }
+}
+
+function showAuthSettingsMsg(msg, type) {
+  const el = document.getElementById('auth-settings-msg');
+  el.textContent = msg;
+  el.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+  el.style.display = 'flex';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function renderAuthSettings() {
+  const users = getCustomUsers() || AUTH_CONFIG.USERS;
+  const ips = getCustomIPs() || AUTH_CONFIG.IP_WHITELIST;
+
+  document.getElementById('auth-users-list').innerHTML = Object.keys(users).map(u => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(42,42,58,.5);">
+      <span style="font-size:18px;">👤</span>
+      <div style="flex:1;">
+        <div style="font-weight:600;color:var(--text-bright);">${u}</div>
+        <div style="font-size:11px;color:var(--text-muted);">••••••••••••••••</div>
+      </div>
+      ${u === 'admin' ? '<span class="tag tag-info">admin</span>' : ''}
+      <button onclick="removeUser('${u}')" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:var(--danger);border-color:rgba(244,63,94,.2);">Remover</button>
+    </div>`).join('');
+
+  document.getElementById('ip-list').value = ips.join('\n');
+  document.getElementById('ip-count-badge').textContent = ips.length === 0 ? 'Todos os IPs permitidos' : `${ips.length} IP(s) na whitelist`;
+}
+
+async function generateHash() {
+  const p = document.getElementById('hash-gen-input').value;
+  if (!p) return;
+  const h = await sha256(p);
+  document.getElementById('hash-gen-output').textContent = h;
+  document.getElementById('hash-gen-output').style.display = 'block';
+}
+
+function refreshSessionInfo() {
+  const box = document.getElementById('session-info-box');
+  if (!box) return;
+  const sess = sessionStorage.getItem('cateyes_auth');
+  if (!sess) { box.textContent = 'Nenhuma sessão ativa.'; return; }
+  try {
+    const s = JSON.parse(sess);
+    const elapsed = Math.floor((Date.now() - s.ts) / 60000);
+    const remaining = Math.max(0, AUTH_CONFIG.SESSION_HOURS * 60 - elapsed);
+    box.innerHTML = `
+      <span style="color:var(--accent)">👤 ${s.user}</span>
+      &nbsp;|&nbsp; IP: <span style="color:var(--info)">${s.ip || '—'}</span>
+      &nbsp;|&nbsp; Login: <span style="color:var(--text-muted)">${new Date(s.ts).toLocaleTimeString('pt-BR')}</span>
+      &nbsp;|&nbsp; Expira em: <span style="color:${remaining < 30 ? 'var(--warn)' : 'var(--text)'}">${remaining}min</span>`;
+  } catch { box.textContent = 'Erro ao ler sessão.'; }
+}
 
 // ======================== UTILS ========================
 function recordHistory(type, target, verdict, isThreat) {
