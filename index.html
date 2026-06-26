@@ -294,6 +294,34 @@
   }
   .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(168,85,247,.07); }
 
+  /* HOME PAGE */
+  #page-home.active { display: flex !important; }
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50% { transform: translateY(-30px) scale(1.05); }
+  }
+  @keyframes logoPulse {
+    0%, 100% { box-shadow: 0 0 60px rgba(168,85,247,.5), 0 0 120px rgba(168,85,247,.2); }
+    50% { box-shadow: 0 0 80px rgba(168,85,247,.7), 0 0 160px rgba(168,85,247,.35); }
+  }
+  .home-feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .home-feature-card:hover {
+    border-color: rgba(168,85,247,.4);
+    background: rgba(168,85,247,.06);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(168,85,247,.12);
+  }
+  .home-feature-icon { font-size: 28px; margin-bottom: 10px; }
+  .home-feature-title { font-size: 14px; font-weight: 700; color: var(--text-bright); margin-bottom: 6px; }
+  .home-feature-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
   /* MAP PULSE ANIMATION */
   @keyframes mapPulse {
     0% { transform: scale(1); opacity: .4; }
@@ -332,7 +360,8 @@
     <div class="logo-text">Cateye<span>'s</span></div>
   </div>
   <nav>
-    <button class="active" onclick="goto('dashboard')"><span>📊 </span>Dashboard</button>
+    <button class="active" onclick="goto('home')"><span>🏠 </span>Home</button>
+    <button onclick="goto('dashboard')"><span>📊 </span>Dashboard</button>
     <button onclick="goto('map')"><span>🗺️ </span>Mapa</button>
     <button onclick="goto('feed')"><span>📡 </span>Intel</button>
     <button onclick="goto('ioc')"><span>🔎 </span>IOCs</button>
@@ -346,8 +375,111 @@
   </nav>
 </header>
 
+<!-- ======================== HOME ======================== -->
+<div id="page-home" class="page active" style="min-height:calc(100vh - 56px);display:none;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+
+  <!-- Animated BG orbs -->
+  <div style="position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.12) 0%,transparent 70%);top:-100px;left:-150px;pointer-events:none;animation:orbFloat 8s ease-in-out infinite;"></div>
+  <div style="position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.1) 0%,transparent 70%);bottom:-80px;right:-100px;pointer-events:none;animation:orbFloat 10s ease-in-out infinite reverse;"></div>
+  <div style="position:absolute;width:250px;height:250px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.06) 0%,transparent 70%);top:40%;left:60%;pointer-events:none;animation:orbFloat 12s ease-in-out infinite;"></div>
+
+  <div style="position:relative;z-index:2;text-align:center;padding:40px 24px;max-width:860px;margin:0 auto;">
+
+    <!-- LOGO HERO -->
+    <div style="display:inline-flex;align-items:center;justify-content:center;width:96px;height:96px;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:24px;box-shadow:0 0 60px rgba(168,85,247,.5),0 0 120px rgba(168,85,247,.2);margin-bottom:32px;animation:logoPulse 3s ease-in-out infinite;">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:52px;height:52px;">
+        <ellipse cx="12" cy="12" rx="10" ry="6" stroke="white" stroke-width="1.5"/>
+        <ellipse cx="12" cy="12" rx="3.5" ry="6" fill="white" opacity=".95"/>
+        <circle cx="12" cy="12" r="2" fill="#a855f7"/>
+      </svg>
+    </div>
+
+    <!-- NAME -->
+    <div style="font-size:56px;font-weight:900;letter-spacing:-2px;color:var(--text-bright);line-height:1;margin-bottom:8px;">
+      Cateye<span style="color:var(--accent)">'s</span>
+    </div>
+    <div style="font-size:14px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--text-muted);margin-bottom:28px;">Security Intelligence Platform</div>
+
+    <!-- TAGLINE -->
+    <p style="font-size:18px;color:var(--text);line-height:1.7;max-width:600px;margin:0 auto 40px;font-weight:400;">
+      Análise de <strong style="color:var(--accent)">URLs</strong>, <strong style="color:var(--accent)">malware</strong>, <strong style="color:var(--accent)">IPs</strong> e <strong style="color:var(--accent)">vulnerabilidades</strong> em tempo real.<br>
+      Inteligência de ameaças direto no seu browser — sem instalar nada.
+    </p>
+
+    <!-- CTA BUTTONS -->
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:56px;">
+      <button onclick="goto('dashboard')" class="btn btn-primary" style="font-size:15px;padding:13px 32px;border-radius:12px;box-shadow:0 8px 32px rgba(168,85,247,.4);">
+        🚀 Acessar Plataforma
+      </button>
+      <button onclick="goto('map')" class="btn btn-ghost" style="font-size:15px;padding:13px 32px;border-radius:12px;">
+        🗺️ Ver Mapa ao Vivo
+      </button>
+    </div>
+
+    <!-- FEATURES GRID -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:48px;text-align:left;">
+      <div class="home-feature-card" onclick="goto('map')">
+        <div class="home-feature-icon">🗺️</div>
+        <div class="home-feature-title">Mapa de Ameaças</div>
+        <div class="home-feature-desc">Visualize C2 botnets e ataques em tempo real no mapa mundial</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('feed')">
+        <div class="home-feature-icon">📡</div>
+        <div class="home-feature-title">Feed de Inteligência</div>
+        <div class="home-feature-desc">Feodo Tracker, URLhaus, CISA KEV e ThreatFox atualizados ao vivo</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('ioc')">
+        <div class="home-feature-icon">🔎</div>
+        <div class="home-feature-title">Busca de IOCs</div>
+        <div class="home-feature-desc">Pesquise IPs, hashes e domínios em múltiplas bases simultaneamente</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('dns')">
+        <div class="home-feature-icon">🌐</div>
+        <div class="home-feature-title">DNS & SSL</div>
+        <div class="home-feature-desc">Registros DNS, SPF, DMARC e certificados SSL em segundos</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('url')">
+        <div class="home-feature-icon">🔗</div>
+        <div class="home-feature-title">Análise de URLs</div>
+        <div class="home-feature-desc">70+ engines de detecção via VirusTotal e URLhaus</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('hash')">
+        <div class="home-feature-icon">🦠</div>
+        <div class="home-feature-title">Análise de Malware</div>
+        <div class="home-feature-desc">Hash local, upload direto ou análise por link — sem executar nada</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('cve')">
+        <div class="home-feature-icon">⚡</div>
+        <div class="home-feature-title">Pesquisa CVEs</div>
+        <div class="home-feature-desc">Base NIST NVD com score CVSS e histórico de exploração</div>
+      </div>
+      <div class="home-feature-card" onclick="goto('report')">
+        <div class="home-feature-icon">📄</div>
+        <div class="home-feature-title">Gerador de Relatório</div>
+        <div class="home-feature-desc">Compile análises em relatório HTML pronto para enviar por e-mail</div>
+      </div>
+    </div>
+
+    <!-- FOOTER NOTE -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
+        <span style="color:#34d399">●</span> 100% client-side
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
+        <span style="color:#34d399">●</span> Sem dados armazenados
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
+        <span style="color:#34d399">●</span> APIs gratuitas
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);">
+        <span style="color:#34d399">●</span> Sem instalação
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ======================== DASHBOARD ======================== -->
-<div id="page-dashboard" class="page active container">
+<div id="page-dashboard" class="page container">
   <div class="page-header">
     <h2>Painel de Controle</h2>
     <p>Visão geral das análises realizadas nesta sessão.</p>
@@ -926,7 +1058,7 @@ const state = {
 };
 
 // ======================== NAV ========================
-const NAV_PAGES = ['dashboard','map','feed','ioc','dns','url','hash','ip','cve','report','settings'];
+const NAV_PAGES = ['home','dashboard','map','feed','ioc','dns','url','hash','ip','cve','report','settings'];
 function goto(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
