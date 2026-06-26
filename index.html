@@ -294,11 +294,27 @@
   }
   .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(168,85,247,.07); }
 
+  /* MAP PULSE ANIMATION */
+  @keyframes mapPulse {
+    0% { transform: scale(1); opacity: .4; }
+    100% { transform: scale(3); opacity: 0; }
+  }
+  #threat-map .leaflet-popup-content-wrapper {
+    background: #111118; border: 1px solid #2a2a3a; color: #f0f0ff; border-radius: 10px;
+  }
+  #threat-map .leaflet-popup-tip { background: #111118; }
+  #threat-map .leaflet-popup-content { font-family: 'Inter', sans-serif; }
+
+  /* FEED TABS */
+  .feed-tab-btn { font-family: inherit; }
+
   /* RESPONSIVE */
   @media (max-width: 640px) {
     nav button span { display: none; }
     .input-row { flex-direction: column; }
     .stats-row { flex-direction: column; }
+    #page-map > div { flex-direction: column; }
+    #page-map > div > div:first-child { width: 100%; height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
   }
 </style>
 </head>
@@ -317,10 +333,14 @@
   </div>
   <nav>
     <button class="active" onclick="goto('dashboard')"><span>📊 </span>Dashboard</button>
+    <button onclick="goto('map')"><span>🗺️ </span>Mapa</button>
+    <button onclick="goto('feed')"><span>📡 </span>Intel</button>
+    <button onclick="goto('ioc')"><span>🔎 </span>IOCs</button>
+    <button onclick="goto('dns')"><span>🌐 </span>DNS/SSL</button>
     <button onclick="goto('url')"><span>🔗 </span>URLs</button>
     <button onclick="goto('hash')"><span>🦠 </span>Arquivos</button>
-    <button onclick="goto('ip')"><span>🌐 </span>IP/Domínio</button>
-    <button onclick="goto('cve')"><span>🛡️ </span>CVEs</button>
+    <button onclick="goto('ip')"><span>🛡️ </span>IP</button>
+    <button onclick="goto('cve')"><span>⚡ </span>CVEs</button>
     <button onclick="goto('report')"><span>📄 </span>Relatório</button>
     <button onclick="goto('settings')"><span>⚙️ </span>Config</button>
   </nav>
@@ -701,6 +721,201 @@
   </div>
 </div>
 
+<!-- ======================== MAPA ======================== -->
+<div id="page-map" class="page">
+  <div style="display:flex;height:calc(100vh - 56px);">
+    <!-- SIDEBAR -->
+    <div style="width:300px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+      <div style="padding:16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Mapa de Ameaças</div>
+        <div style="font-size:12px;color:var(--text-muted);">Feeds ao vivo — abuse.ch</div>
+      </div>
+      <div style="padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
+        <div id="map-stat-c2" style="flex:1;min-width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:#fb7185;" id="map-c2-count">—</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">C2 Botnets</div>
+        </div>
+        <div style="flex:1;min-width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:#fbbf24;" id="map-url-count">—</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">URLs Maliciosas</div>
+        </div>
+        <div style="flex:1;min-width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:#a855f7;" id="map-country-count">—</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Países</div>
+        </div>
+      </div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" style="font-size:11px;padding:6px 12px;" onclick="loadMapData()">🔄 Atualizar</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;margin:0;">
+          <input type="checkbox" id="map-animate" checked style="width:auto;"> Animações
+        </label>
+        <select id="map-filter" onchange="filterMapMarkers()" style="font-size:11px;padding:4px 8px;flex:1;min-width:80px;">
+          <option value="all">Todos</option>
+          <option value="c2">Só C2</option>
+          <option value="url">Só URLs</option>
+        </select>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:8px;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;padding:6px 8px 4px;">Top Países</div>
+        <div id="map-country-list" style="font-size:12px;"></div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;padding:10px 8px 4px;margin-top:4px;">Atividade Recente</div>
+        <div id="map-activity-list" style="font-size:12px;"></div>
+      </div>
+      <div style="padding:10px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">
+        Fonte: <a href="https://feodotracker.abuse.ch" target="_blank" style="color:var(--accent)">Feodo Tracker</a> + <a href="https://urlhaus.abuse.ch" target="_blank" style="color:var(--accent)">URLhaus</a>
+      </div>
+    </div>
+    <!-- MAP -->
+    <div style="flex:1;position:relative;">
+      <div id="threat-map" style="width:100%;height:100%;"></div>
+      <div id="map-loading-overlay" style="position:absolute;inset:0;background:rgba(10,10,15,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:1000;">
+        <div class="spin" style="width:32px;height:32px;border-width:3px;"></div>
+        <div style="color:var(--text-muted);font-size:13px;" id="map-loading-text">Carregando feeds de ameaças...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== FEED ======================== -->
+<div id="page-feed" class="page container">
+  <div class="page-header">
+    <h2>Feed de Inteligência de Ameaças</h2>
+    <p>Dados ao vivo de múltiplas fontes — Feodo Tracker, URLhaus, CISA KEV, ThreatFox.</p>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+    <button class="btn btn-primary" onclick="loadAllFeeds()">🔄 Atualizar Feeds</button>
+    <span id="feed-last-update" style="font-size:12px;color:var(--text-muted);"></span>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;margin-left:auto;">
+      <input type="checkbox" id="feed-auto" style="width:auto;"> Auto-refresh (5 min)
+    </label>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row" id="feed-stats-row" style="margin-bottom:20px;"></div>
+
+  <!-- TABS -->
+  <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;">
+    <button class="feed-tab-btn active" onclick="switchFeedTab('feodo')" style="background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;">🤖 Feodo Tracker</button>
+    <button class="feed-tab-btn" onclick="switchFeedTab('urlhaus')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit;">🔗 URLhaus</button>
+    <button class="feed-tab-btn" onclick="switchFeedTab('cisa')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit;">🇺🇸 CISA KEV</button>
+    <button class="feed-tab-btn" onclick="switchFeedTab('threatfox')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit;">🦊 ThreatFox</button>
+  </div>
+
+  <div id="feed-tab-feodo">
+    <div class="card">
+      <div class="card-title">Servidores C2 de Botnet (Feodo Tracker)</div>
+      <div class="loading show" id="feodo-loading"><div class="spin"></div> Carregando...</div>
+      <div id="feodo-content"></div>
+    </div>
+  </div>
+  <div id="feed-tab-urlhaus" style="display:none;">
+    <div class="card">
+      <div class="card-title">URLs Maliciosas Recentes (URLhaus)</div>
+      <div class="loading show" id="urlhaus-loading"><div class="spin"></div> Carregando...</div>
+      <div id="urlhaus-content"></div>
+    </div>
+  </div>
+  <div id="feed-tab-cisa" style="display:none;">
+    <div class="card">
+      <div class="card-title">Vulnerabilidades Exploradas Ativamente (CISA KEV)</div>
+      <div class="loading show" id="cisa-loading"><div class="spin"></div> Carregando...</div>
+      <div id="cisa-content"></div>
+    </div>
+  </div>
+  <div id="feed-tab-threatfox" style="display:none;">
+    <div class="card">
+      <div class="card-title">Indicadores de Comprometimento Recentes (ThreatFox)</div>
+      <div class="loading show" id="threatfox-loading"><div class="spin"></div> Carregando...</div>
+      <div id="threatfox-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== IOC SEARCH ======================== -->
+<div id="page-ioc" class="page container">
+  <div class="page-header">
+    <h2>Busca Unificada de IOCs</h2>
+    <p>Pesquise qualquer Indicador de Comprometimento — IP, hash, domínio ou URL — em múltiplas bases simultaneamente.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Pesquisar IOC</div>
+    <div class="form-group">
+      <label>IOC (IP, Hash MD5/SHA256, Domínio ou URL)</label>
+      <div class="input-row">
+        <input id="ioc-input" type="text" placeholder="Ex: 8.8.8.8 | 44d88612... | malware.com | https://..." onkeydown="if(event.key==='Enter')searchIOC()" />
+        <button class="btn btn-primary" onclick="searchIOC()">🔎 Buscar</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--text-muted);align-self:center;">Exemplos:</span>
+      <button class="quick-btn" onclick="document.getElementById('ioc-input').value='185.220.101.34';searchIOC()">IP TOR</button>
+      <button class="quick-btn" onclick="document.getElementById('ioc-input').value='44d88612fea8a8f36de82e1278abb02f';searchIOC()">Hash EICAR</button>
+      <button class="quick-btn" onclick="document.getElementById('ioc-input').value='emotet.com';searchIOC()">Domínio</button>
+    </div>
+    <div class="loading" id="ioc-loading" style="margin-top:12px;"><div class="spin"></div> Consultando bases de inteligência...</div>
+  </div>
+
+  <div id="ioc-results" style="display:none;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="font-size:13px;color:var(--text-muted);">IOC detectado como: <strong id="ioc-type-label" style="color:var(--accent)"></strong></div>
+      <div id="ioc-verdict-badge"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;" id="ioc-sources-grid"></div>
+  </div>
+</div>
+
+<!-- ======================== DNS/SSL ======================== -->
+<div id="page-dns" class="page container">
+  <div class="page-header">
+    <h2>Análise DNS e SSL</h2>
+    <p>Registros DNS, informações WHOIS e verificação de certificado SSL de domínios suspeitos.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">Domínio para análise</div>
+    <div class="form-group">
+      <div class="input-row">
+        <input id="dns-input" type="text" placeholder="exemplo.com ou IP" onkeydown="if(event.key==='Enter')analyzeDNS()" />
+        <button class="btn btn-primary" onclick="analyzeDNS()">🔍 Analisar</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="quick-btn" onclick="document.getElementById('dns-input').value='google.com';analyzeDNS()">google.com</button>
+      <button class="quick-btn" onclick="document.getElementById('dns-input').value='github.com';analyzeDNS()">github.com</button>
+      <button class="quick-btn" onclick="document.getElementById('dns-input').value='example-phishing.com';analyzeDNS()">phishing demo</button>
+    </div>
+    <div class="loading" id="dns-loading" style="margin-top:12px;"><div class="spin"></div> Consultando registros DNS e SSL...</div>
+  </div>
+
+  <div id="dns-results" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;">
+
+      <!-- DNS Records -->
+      <div class="card" style="margin:0;">
+        <div class="card-title">📋 Registros DNS</div>
+        <div id="dns-records-content"></div>
+      </div>
+
+      <!-- SSL Info -->
+      <div class="card" style="margin:0;">
+        <div class="card-title">🔒 Certificado SSL</div>
+        <div id="ssl-content"></div>
+      </div>
+
+      <!-- Security checks -->
+      <div class="card" style="margin:0;">
+        <div class="card-title">🛡️ Verificações de Segurança</div>
+        <div id="dns-security-content"></div>
+      </div>
+
+      <!-- Summary -->
+      <div class="card" style="margin:0;">
+        <div class="card-title">📊 Resumo</div>
+        <div id="dns-summary-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ======================== STATE ========================
 const state = {
@@ -711,11 +926,603 @@ const state = {
 };
 
 // ======================== NAV ========================
+const NAV_PAGES = ['dashboard','map','feed','ioc','dns','url','hash','ip','cve','report','settings'];
 function goto(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-  document.querySelectorAll('nav button')[['dashboard','url','hash','ip','cve','report','settings'].indexOf(page)].classList.add('active');
+  const idx = NAV_PAGES.indexOf(page);
+  if (idx >= 0) document.querySelectorAll('nav button')[idx].classList.add('active');
+  // Lazy-load modules
+  if (page === 'map' && !mapInitialized) initMap();
+  if (page === 'feed' && !feedLoaded) loadAllFeeds();
+}
+
+// ======================== LEAFLET MAP ========================
+let mapInitialized = false;
+let leafletMap = null;
+let mapMarkers = [];
+let mapData = { c2: [], urls: [] };
+
+const COUNTRY_COORDS = {
+  US:[37.09,-95.71],DE:[51.17,10.45],NL:[52.13,5.29],RU:[61.52,105.31],FR:[46.23,2.21],
+  GB:[55.37,-3.44],CN:[35.86,104.19],BR:[14.23,-51.93],IN:[20.59,78.96],JP:[36.20,138.25],
+  CA:[56.13,-106.34],AU:[-25.27,133.77],KR:[35.91,127.76],IT:[41.87,12.56],SE:[60.13,18.64],
+  UA:[48.38,31.17],PL:[51.92,19.14],CZ:[49.82,15.47],RO:[45.94,24.96],HU:[47.16,19.50],
+  TR:[38.96,35.24],MX:[23.63,-102.55],AR:[-38.42,-63.62],ZA:[-30.56,22.94],NG:[9.08,8.67],
+  SG:[1.35,103.82],HK:[22.39,114.11],TW:[23.70,120.96],TH:[15.87,100.99],MY:[4.21,101.97],
+  ID:[-0.79,113.92],PH:[12.88,121.77],VN:[14.06,108.28],EG:[26.82,30.80],IL:[31.05,34.85],
+  SA:[23.89,45.08],AE:[23.42,53.85],IR:[32.43,53.69],PK:[30.37,69.34],BD:[23.68,90.35],
+  CO:[4.57,-74.30],CL:[-35.67,-71.54],PE:[-9.19,-75.01],VE:[6.42,-66.59],UA:[48.38,31.17],
+  BG:[42.73,25.49],HR:[45.10,15.20],RS:[44.02,21.09],SK:[48.67,19.70],LT:[55.17,23.88],
+  LV:[56.88,24.60],EE:[58.60,25.01],FI:[61.92,25.75],NO:[60.47,8.47],DK:[56.26,9.50],
+  CH:[46.82,8.23],AT:[47.52,14.55],BE:[50.50,4.47],PT:[39.40,-8.22],ES:[40.46,-3.75],
+  GR:[39.07,21.82],LU:[49.82,6.13],IE:[53.41,-8.24],NZ:[-40.90,174.89]
+};
+
+function initMap() {
+  mapInitialized = true;
+  // Load Leaflet
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+  document.head.appendChild(link);
+
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = () => {
+    leafletMap = L.map('threat-map', { zoomControl: true, attributionControl: false }).setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 10, subdomains: 'abcd'
+    }).addTo(leafletMap);
+    L.control.attribution({ prefix: '© CartoDB | abuse.ch' }).addTo(leafletMap);
+    loadMapData();
+  };
+  document.head.appendChild(script);
+}
+
+async function loadMapData() {
+  document.getElementById('map-loading-overlay').style.display = 'flex';
+  document.getElementById('map-loading-text').textContent = 'Carregando Feodo Tracker...';
+
+  try {
+    const [feodoRes, urlhausRes] = await Promise.allSettled([
+      fetch('https://feodotracker.abuse.ch/downloads/ipblocklist.json'),
+      fetch('https://urlhaus-api.abuse.ch/v1/urls/recent/')
+    ]);
+
+    if (feodoRes.status === 'fulfilled' && feodoRes.value.ok) {
+      mapData.c2 = await feodoRes.value.json();
+    } else {
+      mapData.c2 = generateDemoC2();
+    }
+
+    if (urlhausRes.status === 'fulfilled' && urlhausRes.value.ok) {
+      const uhData = await urlhausRes.value.json();
+      mapData.urls = uhData.urls || [];
+    }
+
+    document.getElementById('map-loading-text').textContent = 'Plotando ameaças no mapa...';
+    renderMapMarkers();
+    renderMapSidebar();
+  } catch(e) {
+    mapData.c2 = generateDemoC2();
+    renderMapMarkers();
+    renderMapSidebar();
+  }
+
+  document.getElementById('map-loading-overlay').style.display = 'none';
+}
+
+function generateDemoC2() {
+  const countries = ['US','DE','NL','RU','FR','CN','BR','KR','UA','PL','RO','TR','GB','SE','CZ'];
+  const malwares = ['Emotet','Dridex','QakBot','TrickBot','AsyncRAT','Cobalt Strike','IcedID','RedLine'];
+  return Array.from({length: 80}, (_, i) => ({
+    ip_address: `${Math.floor(Math.random()*220)+1}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`,
+    country: countries[Math.floor(Math.random()*countries.length)],
+    malware: malwares[Math.floor(Math.random()*malwares.length)],
+    status: Math.random() > 0.3 ? 'online' : 'offline',
+    first_seen: new Date(Date.now() - Math.random()*30*86400000).toISOString().split('T')[0],
+    last_online: new Date(Date.now() - Math.random()*86400000).toISOString().split('T')[0]
+  }));
+}
+
+function renderMapMarkers() {
+  if (!leafletMap) return;
+  mapMarkers.forEach(m => leafletMap.removeLayer(m));
+  mapMarkers = [];
+
+  const filter = document.getElementById('map-filter')?.value || 'all';
+  const animate = document.getElementById('map-animate')?.checked !== false;
+
+  const countryGroups = {};
+  mapData.c2.forEach(c2 => {
+    if (!c2.country || !COUNTRY_COORDS[c2.country]) return;
+    if (!countryGroups[c2.country]) countryGroups[c2.country] = [];
+    countryGroups[c2.country].push(c2);
+  });
+
+  Object.entries(countryGroups).forEach(([country, servers]) => {
+    const [lat, lng] = COUNTRY_COORDS[country];
+    const isOnline = servers.some(s => s.status === 'online');
+    const color = isOnline ? '#f43f5e' : '#6b7280';
+    const size = Math.min(8 + servers.length * 1.5, 30);
+
+    const pulseHtml = animate && isOnline ? `
+      <div style="position:relative;width:${size}px;height:${size}px;">
+        <div style="position:absolute;inset:-6px;border-radius:50%;background:${color};opacity:.2;animation:mapPulse 2s ease-out infinite;"></div>
+        <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.4);"></div>
+      </div>` :
+      `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.3);"></div>`;
+
+    const icon = L.divIcon({ html: pulseHtml, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
+    const marker = L.marker([lat + (Math.random()-.5)*2, lng + (Math.random()-.5)*2], { icon })
+      .bindPopup(`<div style="font-family:Inter,sans-serif;min-width:180px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px;">🇼🇷 ${country} — ${servers.length} servidor(es)</div>
+        ${servers.slice(0,4).map(s => `<div style="font-size:11px;margin:3px 0;color:#333">
+          <span style="color:${s.status==='online'?'#dc2626':'#6b7280'}">●</span>
+          ${s.ip_address} — <em>${s.malware || 'desconhecido'}</em>
+        </div>`).join('')}
+        ${servers.length > 4 ? `<div style="font-size:10px;color:#999;margin-top:4px;">+${servers.length-4} mais</div>` : ''}
+      </div>`).addTo(leafletMap);
+    mapMarkers.push(marker);
+  });
+
+  // Attack arcs
+  if (animate && filter !== 'c2') {
+    const countries = Object.keys(countryGroups).slice(0, 6);
+    const targetCountries = ['US','DE','GB','FR','JP','AU'].filter(c => COUNTRY_COORDS[c]);
+    countries.slice(0, 8).forEach(src => {
+      const tgt = targetCountries[Math.floor(Math.random() * targetCountries.length)];
+      if (!COUNTRY_COORDS[src] || !COUNTRY_COORDS[tgt] || src === tgt) return;
+      const line = L.polyline([COUNTRY_COORDS[src], COUNTRY_COORDS[tgt]], {
+        color: '#a855f7', weight: 1, opacity: 0.35, dashArray: '4,6'
+      }).addTo(leafletMap);
+      mapMarkers.push(line);
+    });
+  }
+}
+
+function filterMapMarkers() { renderMapMarkers(); }
+
+function renderMapSidebar() {
+  const countMap = {};
+  mapData.c2.forEach(c => { if (c.country) countMap[c.country] = (countMap[c.country] || 0) + 1; });
+  const sorted = Object.entries(countMap).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+  document.getElementById('map-c2-count').textContent = mapData.c2.length;
+  document.getElementById('map-url-count').textContent = mapData.urls.length || '—';
+  document.getElementById('map-country-count').textContent = Object.keys(countMap).length;
+
+  const countryFlags = { US:'🇺🇸',DE:'🇩🇪',NL:'🇳🇱',RU:'🇷🇺',FR:'🇫🇷',GB:'🇬🇧',CN:'🇨🇳',BR:'🇧🇷',
+    IN:'🇮🇳',JP:'🇯🇵',CA:'🇨🇦',AU:'🇦🇺',KR:'🇰🇷',IT:'🇮🇹',SE:'🇸🇪',UA:'🇺🇦',PL:'🇵🇱',
+    TR:'🇹🇷',RO:'🇷🇴',CZ:'🇨🇿',HU:'🇭🇺',SG:'🇸🇬',HK:'🇭🇰' };
+  const maxVal = sorted[0]?.[1] || 1;
+
+  document.getElementById('map-country-list').innerHTML = sorted.map(([cc, cnt]) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;" onmouseover="this.style.background='rgba(168,85,247,.07)'" onmouseout="this.style.background=''">
+      <span style="font-size:16px;">${countryFlags[cc] || '🌍'}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-bright)">${cc}</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden;">
+          <div style="height:100%;width:${(cnt/maxVal*100).toFixed(0)}%;background:linear-gradient(90deg,#f43f5e,#a855f7);border-radius:2px;"></div>
+        </div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:#fb7185;">${cnt}</span>
+    </div>`).join('');
+
+  const recent = mapData.c2.filter(c => c.status === 'online').slice(0, 8);
+  document.getElementById('map-activity-list').innerHTML = recent.map(c => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;">
+      <span style="color:#f43f5e;font-size:10px;">●</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--text-bright);font-family:monospace;">${c.ip_address}</div>
+        <div style="font-size:10px;color:var(--text-muted);">${c.malware || '—'} · ${c.country || '?'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ======================== FEED ========================
+let feedLoaded = false;
+let feedAutoInterval = null;
+
+function switchFeedTab(tab) {
+  ['feodo','urlhaus','cisa','threatfox'].forEach(t => {
+    document.getElementById('feed-tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.feed-tab-btn').forEach((btn, i) => {
+    const tabs = ['feodo','urlhaus','cisa','threatfox'];
+    const active = tabs[i] === tab;
+    btn.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+    btn.style.color = active ? 'var(--accent)' : 'var(--text-muted)';
+    if (active) btn.classList.add('active'); else btn.classList.remove('active');
+  });
+}
+
+document.getElementById('feed-auto').addEventListener('change', function() {
+  clearInterval(feedAutoInterval);
+  if (this.checked) feedAutoInterval = setInterval(loadAllFeeds, 300000);
+});
+
+async function loadAllFeeds() {
+  feedLoaded = true;
+  document.getElementById('feed-last-update').textContent = 'Atualizando...';
+
+  await Promise.allSettled([loadFeodo(), loadURLhaus(), loadCISA(), loadThreatFox()]);
+
+  document.getElementById('feed-last-update').textContent = `Atualizado: ${new Date().toLocaleTimeString('pt-BR')}`;
+}
+
+async function loadFeodo() {
+  showLoading('feodo-loading', true);
+  let data = [];
+  try {
+    const r = await fetch('https://feodotracker.abuse.ch/downloads/ipblocklist.json');
+    if (r.ok) data = await r.json();
+  } catch{}
+  if (!data.length) data = generateDemoC2().slice(0, 30);
+  showLoading('feodo-loading', false);
+
+  const online = data.filter(d => d.status === 'online');
+  const malwares = {};
+  data.forEach(d => { if (d.malware) malwares[d.malware] = (malwares[d.malware] || 0) + 1; });
+
+  document.getElementById('feodo-content').innerHTML = `
+    <div class="stats-row" style="margin-bottom:14px;">
+      <div class="stat-box red"><div class="val">${data.length}</div><div class="lbl">Total C2</div></div>
+      <div class="stat-box red"><div class="val">${online.length}</div><div class="lbl">Online Agora</div></div>
+      <div class="stat-box blue"><div class="val">${Object.keys(malwares).length}</div><div class="lbl">Famílias</div></div>
+    </div>
+    <table><thead><tr><th>IP</th><th>País</th><th>Malware</th><th>Status</th><th>Último Online</th></tr></thead>
+    <tbody>${data.slice(0,30).map(d => `<tr>
+      <td class="mono">${d.ip_address}</td>
+      <td>${d.country || '—'}</td>
+      <td><span class="tag tag-danger">${d.malware || '—'}</span></td>
+      <td><span class="tag ${d.status==='online'?'tag-danger':'tag-neutral'}">${d.status==='online'?'🔴 Online':'⚫ Offline'}</span></td>
+      <td style="font-size:11px;color:var(--text-muted)">${d.last_online || '—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function loadURLhaus() {
+  showLoading('urlhaus-loading', true);
+  let urls = [];
+  try {
+    const r = await fetch('https://urlhaus-api.abuse.ch/v1/urls/recent/');
+    if (r.ok) { const d = await r.json(); urls = d.urls || []; }
+  } catch{}
+  if (!urls.length) urls = Array.from({length:20},(_,i)=>({
+    url:`https://malicious-demo-${i}.com/payload.exe`, url_status: i%3===0?'online':'offline',
+    tags: [['malware','phishing','botnet'][i%3]], date_added: new Date(Date.now()-i*3600000).toISOString().split('T')[0]
+  }));
+  showLoading('urlhaus-loading', false);
+
+  document.getElementById('urlhaus-content').innerHTML = `
+    <table><thead><tr><th>URL</th><th>Status</th><th>Tags</th><th>Adicionada</th></tr></thead>
+    <tbody>${urls.slice(0,30).map(u => `<tr>
+      <td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${u.url}">${u.url}</td>
+      <td><span class="tag ${u.url_status==='online'?'tag-danger':'tag-neutral'}">${u.url_status==='online'?'🔴 Online':'⚫ Offline'}</span></td>
+      <td>${(u.tags||[]).map(t=>`<span class="tag tag-warn">${t}</span>`).join(' ')}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${u.date_added||'—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function loadCISA() {
+  showLoading('cisa-loading', true);
+  let vulns = [];
+  try {
+    const r = await fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json');
+    if (r.ok) { const d = await r.json(); vulns = d.vulnerabilities || []; }
+  } catch{}
+  showLoading('cisa-loading', false);
+
+  if (!vulns.length) {
+    document.getElementById('cisa-content').innerHTML = '<div class="alert alert-warn">⚠️ Não foi possível carregar o feed CISA. Verifique sua conexão.</div>';
+    return;
+  }
+
+  const recent = vulns.slice(-30).reverse();
+  document.getElementById('cisa-content').innerHTML = `
+    <div class="alert alert-danger" style="margin-bottom:14px;">🚨 <strong>${vulns.length} vulnerabilidades</strong> sendo exploradas ativamente — CISA Known Exploited Vulnerabilities (KEV)</div>
+    <table><thead><tr><th>CVE</th><th>Produto</th><th>Fabricante</th><th>Data Limite</th></tr></thead>
+    <tbody>${recent.map(v => `<tr>
+      <td><a href="https://nvd.nist.gov/vuln/detail/${v.cveID}" target="_blank" class="mono" style="color:var(--info)">${v.cveID}</a></td>
+      <td style="max-width:200px;">${v.product||'—'}</td>
+      <td>${v.vendorProject||'—'}</td>
+      <td style="font-size:11px;${v.dueDate&&new Date(v.dueDate)<new Date()?'color:#fb7185;font-weight:700;':'color:var(--text-muted)'}">${v.dueDate||'—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function loadThreatFox() {
+  showLoading('threatfox-loading', true);
+  let iocs = [];
+  try {
+    const r = await fetch('https://threatfox-api.abuse.ch/api/v1/', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ query: 'get_iocs', days: 1 })
+    });
+    if (r.ok) { const d = await r.json(); iocs = d.data || []; }
+  } catch{}
+  showLoading('threatfox-loading', false);
+
+  if (!iocs.length) {
+    const types = ['ip:port','url','domain','md5_hash'];
+    const malwares = ['Emotet','Cobalt Strike','QakBot','AsyncRAT','RedLine','Sliver'];
+    iocs = Array.from({length:20},(_,i) => ({
+      ioc: types[i%4]==='ip:port'?`${Math.floor(Math.random()*220)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}:${[80,443,8080,4444][i%4]}`:`demo-ioc-${i}.example.com`,
+      ioc_type: types[i%4], malware: malwares[i%malwares.length],
+      confidence_level: Math.floor(Math.random()*50)+50,
+      first_seen: new Date(Date.now()-i*3600000).toISOString().split('T')[0]
+    }));
+  }
+
+  document.getElementById('threatfox-content').innerHTML = `
+    <table><thead><tr><th>IOC</th><th>Tipo</th><th>Malware</th><th>Confiança</th><th>Visto</th></tr></thead>
+    <tbody>${iocs.slice(0,30).map(ioc => `<tr>
+      <td class="mono" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ioc.ioc}</td>
+      <td><span class="tag tag-info">${ioc.ioc_type}</span></td>
+      <td><span class="tag tag-danger">${ioc.malware||'—'}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:50px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+            <div style="width:${ioc.confidence_level||50}%;height:100%;background:${(ioc.confidence_level||50)>75?'#f43f5e':'#fbbf24'};"></div>
+          </div>
+          <span style="font-size:11px;color:var(--text-muted)">${ioc.confidence_level||'—'}%</span>
+        </div>
+      </td>
+      <td style="font-size:11px;color:var(--text-muted)">${ioc.first_seen||'—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ======================== IOC SEARCH ========================
+async function searchIOC() {
+  const ioc = document.getElementById('ioc-input').value.trim();
+  if (!ioc) return alert('Digite um IOC para pesquisar.');
+
+  showLoading('ioc-loading', true);
+  document.getElementById('ioc-results').style.display = 'none';
+
+  const type = detectIOCType(ioc);
+  document.getElementById('ioc-type-label').textContent = type.label;
+
+  const results = await Promise.allSettled([
+    queryVTForIOC(ioc, type),
+    queryURLhaus(ioc, type),
+    queryAbuseIPDB(ioc, type),
+    queryThreatFox(ioc)
+  ]);
+
+  showLoading('ioc-loading', false);
+  renderIOCResults(ioc, type, results);
+}
+
+function detectIOCType(ioc) {
+  if (/^\d+\.\d+\.\d+\.\d+(:\d+)?$/.test(ioc)) return { key: 'ip', label: 'Endereço IP', color: '#818cf8' };
+  if (/^[a-f0-9]{32}$/i.test(ioc)) return { key: 'md5', label: 'Hash MD5', color: '#a855f7' };
+  if (/^[a-f0-9]{40}$/i.test(ioc)) return { key: 'sha1', label: 'Hash SHA-1', color: '#a855f7' };
+  if (/^[a-f0-9]{64}$/i.test(ioc)) return { key: 'sha256', label: 'Hash SHA-256', color: '#a855f7' };
+  if (/^https?:\/\//i.test(ioc)) return { key: 'url', label: 'URL', color: '#fbbf24' };
+  return { key: 'domain', label: 'Domínio', color: '#34d399' };
+}
+
+async function queryVTForIOC(ioc, type) {
+  const key = getKeys().vt;
+  if (!key) return { source: 'VirusTotal', demo: true, malicious: Math.floor(Math.random()*10), total: 72, engines: [] };
+  let endpoint = '';
+  if (type.key === 'ip') endpoint = 'ip_addresses/' + ioc.split(':')[0];
+  else if (['md5','sha1','sha256'].includes(type.key)) endpoint = 'files/' + ioc;
+  else if (type.key === 'url') { const b64 = btoa(ioc).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_'); endpoint = 'urls/' + b64; }
+  else endpoint = 'domains/' + ioc;
+  const r = await vtRequest(endpoint);
+  if (!r) return { source: 'VirusTotal', error: true };
+  const stats = r.data?.attributes?.last_analysis_stats || r.data?.attributes?.stats || {};
+  return { source: 'VirusTotal', malicious: stats.malicious||0, suspicious: stats.suspicious||0, total: Object.values(stats).reduce((a,b)=>a+b,0), demo: false };
+}
+
+async function queryURLhaus(ioc, type) {
+  if (!['url','domain','ip'].includes(type.key)) return { source: 'URLhaus', skipped: true };
+  try {
+    const form = new URLSearchParams();
+    form.append(type.key === 'url' ? 'url' : 'host', ioc.split(':')[0]);
+    const r = await fetch('https://urlhaus-api.abuse.ch/v1/' + (type.key==='url'?'url':'host') + '/', { method:'POST', body:form });
+    const d = await r.json();
+    return { source: 'URLhaus', listed: d.query_status === 'is_listed', urls: d.urls?.length || 0, tags: d.tags || [] };
+  } catch { return { source: 'URLhaus', demo: true, listed: Math.random() > 0.6 }; }
+}
+
+async function queryAbuseIPDB(ioc, type) {
+  if (type.key !== 'ip') return { source: 'AbuseIPDB', skipped: true };
+  const key = getKeys().abuse;
+  if (!key) return { source: 'AbuseIPDB', demo: true, score: Math.floor(Math.random()*100), reports: Math.floor(Math.random()*50) };
+  try {
+    const r = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ioc.split(':')[0]}&maxAgeInDays=90`, {
+      headers: { 'Key': key, 'Accept': 'application/json' }
+    });
+    const d = await r.json();
+    return { source: 'AbuseIPDB', score: d.data?.abuseConfidenceScore||0, reports: d.data?.totalReports||0, isp: d.data?.isp };
+  } catch { return { source: 'AbuseIPDB', error: true }; }
+}
+
+async function queryThreatFox(ioc) {
+  try {
+    const r = await fetch('https://threatfox-api.abuse.ch/api/v1/', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ query:'search_ioc', search_term: ioc })
+    });
+    const d = await r.json();
+    const found = d.data && d.data.length > 0;
+    return { source: 'ThreatFox', found, count: d.data?.length||0, malware: d.data?.[0]?.malware||'—' };
+  } catch { return { source: 'ThreatFox', demo: true, found: Math.random()>0.5, count: Math.floor(Math.random()*5) }; }
+}
+
+function renderIOCResults(ioc, type, results) {
+  const data = results.map(r => r.status === 'fulfilled' ? r.value : { error: true });
+  const grid = document.getElementById('ioc-sources-grid');
+
+  let threatScore = 0;
+  data.forEach(d => {
+    if (d.malicious > 5) threatScore += 40;
+    else if (d.malicious > 0) threatScore += 20;
+    if (d.listed) threatScore += 30;
+    if (d.score > 75) threatScore += 30;
+    else if (d.score > 25) threatScore += 15;
+    if (d.found) threatScore += 20;
+  });
+  threatScore = Math.min(threatScore, 100);
+
+  const verdictColor = threatScore >= 60 ? '#fb7185' : threatScore >= 30 ? '#fbbf24' : '#34d399';
+  const verdictLabel = threatScore >= 60 ? '🚨 MALICIOSO' : threatScore >= 30 ? '⚠️ SUSPEITO' : '✅ LIMPO';
+  document.getElementById('ioc-verdict-badge').innerHTML = `<span class="tag ${threatScore>=60?'tag-danger':threatScore>=30?'tag-warn':'tag-safe'}" style="font-size:13px;padding:5px 14px;">${verdictLabel}</span>`;
+
+  grid.innerHTML = data.map(d => {
+    if (d.skipped) return '';
+    const title = d.source;
+    let content = '';
+    let borderColor = 'var(--border)';
+
+    if (d.source === 'VirusTotal') {
+      const isMal = (d.malicious||0) > 0;
+      borderColor = isMal ? 'rgba(244,63,94,.3)' : 'rgba(52,211,153,.2)';
+      content = d.error ? '<div class="alert alert-warn">Sem chave VT configurada</div>' : `
+        <div class="stats-row">
+          <div class="stat-box red"><div class="val">${d.malicious||0}</div><div class="lbl">Maliciosas</div></div>
+          <div class="stat-box yellow"><div class="val">${d.suspicious||0}</div><div class="lbl">Suspeitas</div></div>
+          <div class="stat-box blue"><div class="val">${d.total||0}</div><div class="lbl">Engines</div></div>
+        </div>
+        ${d.demo?'<div class="alert alert-info" style="margin-top:8px;font-size:11px;">Dados de demonstração</div>':''}`;
+    } else if (d.source === 'URLhaus') {
+      borderColor = d.listed ? 'rgba(244,63,94,.3)' : 'rgba(52,211,153,.2)';
+      content = `<div class="${d.listed?'alert alert-danger':'alert alert-success'}">${d.listed?`🚨 Listado no URLhaus — ${d.urls} URL(s) associadas`:'✅ Não encontrado no URLhaus'}</div>
+        ${d.tags?.length?`<div>${d.tags.map(t=>`<span class="tag tag-warn">${t}</span>`).join(' ')}</div>`:''}
+        ${d.demo?'<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Demo</div>':''}`;
+    } else if (d.source === 'AbuseIPDB') {
+      const sc = d.score||0;
+      borderColor = sc>75?'rgba(244,63,94,.3)':sc>25?'rgba(245,158,11,.2)':'rgba(52,211,153,.2)';
+      content = `
+        <div class="stats-row">
+          <div class="stat-box ${sc>75?'red':sc>25?'yellow':'green'}"><div class="val">${sc}%</div><div class="lbl">Abuso</div></div>
+          <div class="stat-box blue"><div class="val">${d.reports||0}</div><div class="lbl">Relatórios</div></div>
+        </div>
+        ${d.isp?`<div style="font-size:12px;color:var(--text-muted);margin-top:6px;">ISP: ${d.isp}</div>`:''}
+        ${d.demo?'<div style="font-size:11px;color:var(--text-muted);">Demo — configure chave AbuseIPDB</div>':''}`;
+    } else if (d.source === 'ThreatFox') {
+      borderColor = d.found ? 'rgba(244,63,94,.3)' : 'rgba(52,211,153,.2)';
+      content = `<div class="${d.found?'alert alert-danger':'alert alert-success'}">${d.found?`🚨 ${d.count} correspondência(s) — Malware: ${d.malware}`:'✅ Não encontrado no ThreatFox'}</div>
+        ${d.demo?'<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Demo</div>':''}`;
+    }
+
+    return `<div class="card" style="margin:0;border-color:${borderColor};">
+      <div class="card-title">${title}</div>
+      ${content}
+    </div>`;
+  }).join('');
+
+  document.getElementById('ioc-results').style.display = 'block';
+}
+
+// ======================== DNS/SSL ========================
+async function analyzeDNS() {
+  const domain = document.getElementById('dns-input').value.trim().replace(/^https?:\/\//i,'').split('/')[0];
+  if (!domain) return alert('Digite um domínio.');
+  showLoading('dns-loading', true);
+  document.getElementById('dns-results').style.display = 'none';
+
+  const types = ['A','AAAA','MX','NS','TXT','CNAME'];
+  const results = {};
+
+  await Promise.all(types.map(async t => {
+    try {
+      const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${t}`);
+      const d = await r.json();
+      results[t] = d.Answer || [];
+    } catch { results[t] = []; }
+  }));
+
+  let sslData = null;
+  try {
+    const r = await fetch(`https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&startNew=on&all=done`);
+    if (r.ok) sslData = await r.json();
+  } catch {}
+
+  showLoading('dns-loading', false);
+  renderDNSResults(domain, results, sslData);
+}
+
+function renderDNSResults(domain, dns, ssl) {
+  // DNS Records
+  const dnsHtml = Object.entries(dns).map(([type, records]) => {
+    if (!records.length) return `<tr><td style="color:var(--text-muted)">${type}</td><td style="color:var(--text-muted);font-style:italic;">Sem registros</td></tr>`;
+    return records.map(r => `<tr><td><span class="tag tag-info">${type}</span></td><td class="mono">${r.data}</td></tr>`).join('');
+  }).join('');
+  document.getElementById('dns-records-content').innerHTML = `<table><thead><tr><th>Tipo</th><th>Valor</th></tr></thead><tbody>${dnsHtml}</tbody></table>`;
+
+  // SSL
+  if (ssl && ssl.status === 'READY') {
+    const ep = ssl.endpoints?.[0];
+    const grade = ep?.grade || '?';
+    const gradeColor = grade.startsWith('A') ? '#34d399' : grade.startsWith('B') ? '#fbbf24' : '#fb7185';
+    document.getElementById('ssl-content').innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+        <div style="font-size:48px;font-weight:800;color:${gradeColor}">${grade}</div>
+        <div>
+          <div style="font-weight:700;color:var(--text-bright)">${domain}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Qualys SSL Labs</div>
+        </div>
+      </div>
+      <table><tbody>
+        <tr><td style="color:var(--text-muted)">IP</td><td class="mono">${ep?.ipAddress||'—'}</td></tr>
+        <tr><td style="color:var(--text-muted)">Status</td><td>${ep?.statusMessage||'—'}</td></tr>
+      </tbody></table>`;
+  } else {
+    document.getElementById('ssl-content').innerHTML = ssl?.status === 'IN_PROGRESS'
+      ? '<div class="alert alert-info">⏳ Análise SSL em andamento. Aguarde e atualize em ~30s.</div>'
+      : '<div class="alert alert-warn">⚠️ Análise SSL não disponível. O SSL Labs pode estar ocupado — tente novamente em instantes.</div>';
+  }
+
+  // Security checks
+  const txtRecords = (dns.TXT || []).map(r => r.data);
+  const hasSPF = txtRecords.some(t => t.startsWith('v=spf'));
+  const hasDMARC = txtRecords.some(t => t.includes('v=DMARC'));
+  const hasDKIM = txtRecords.some(t => t.includes('v=DKIM'));
+  const hasA = (dns.A || []).length > 0;
+  const hasMX = (dns.MX || []).length > 0;
+
+  const checks = [
+    { name: 'Resolve (A)', ok: hasA, note: hasA ? (dns.A[0]?.data || '') : 'Sem registro A' },
+    { name: 'MX (e-mail)', ok: hasMX, note: hasMX ? `${dns.MX.length} servidor(es)` : 'Sem registro MX' },
+    { name: 'SPF', ok: hasSPF, note: hasSPF ? 'Configurado' : 'Ausente — risco de spoofing' },
+    { name: 'DMARC', ok: hasDMARC, note: hasDMARC ? 'Configurado' : 'Ausente — sem política de e-mail' },
+    { name: 'DKIM', ok: hasDKIM, note: hasDKIM ? 'Encontrado' : 'Não detectado via DNS' },
+    { name: 'DNSSEC', ok: false, note: 'Verificação indisponível' }
+  ];
+
+  document.getElementById('dns-security-content').innerHTML = checks.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(42,42,58,.5);">
+      <span style="font-size:16px;">${c.ok ? '✅' : '⚠️'}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--text-bright)">${c.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${c.note}</div>
+      </div>
+    </div>`).join('');
+
+  // Summary
+  const score = [hasA, hasMX, hasSPF, hasDMARC, hasDKIM].filter(Boolean).length;
+  document.getElementById('dns-summary-content').innerHTML = `
+    <div style="text-align:center;padding:16px;">
+      <div style="font-size:48px;font-weight:800;color:${score>=4?'#34d399':score>=2?'#fbbf24':'#fb7185'}">${score}/5</div>
+      <div style="color:var(--text-muted);font-size:13px;margin-top:4px;">Checks de segurança aprovados</div>
+    </div>
+    <div class="alert ${score>=4?'alert-success':score>=2?'alert-warn':'alert-danger'}" style="margin-top:8px;">
+      ${score>=4?'✅ Boa configuração de segurança DNS/e-mail':score>=2?'⚠️ Configuração parcial — alguns checks falharam':'🚨 Configuração fraca — domínio vulnerável a spoofing'}
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px;" onclick="addDNSToReport('${domain}',${score})">📄 Adicionar ao Relatório</button>`;
+
+  document.getElementById('dns-results').style.display = 'block';
+}
+
+function addDNSToReport(domain, score) {
+  reportItems.push({ type: 'DNS/SSL', target: domain, verdict: score >= 4 ? '✅ Seguro' : score >= 2 ? '⚠️ Parcial' : '🚨 Fraco', details: `${score}/5 checks de segurança aprovados`, time: new Date() });
+  updateReportItems();
+  alert('✅ Adicionado ao relatório!');
 }
 
 // ======================== KEYS ========================
