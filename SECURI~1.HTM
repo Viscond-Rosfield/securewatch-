@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureWatch — Plataforma de Análise de Segurança</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --accent: #00d4aa;
+    --accent2: #238636;
+    --danger: #f85149;
+    --warn: #e3b341;
+    --info: #58a6ff;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --text-bright: #f0f6fc;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* HEADER */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+  .logo svg { width: 28px; height: 28px; }
+  .logo span { color: var(--text-bright); }
+  .logo span em { color: var(--accent); font-style: normal; }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav button { background: none; border: none; color: var(--text-muted); padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; transition: all .15s; }
+  nav button:hover { background: var(--surface2); color: var(--text-bright); }
+  nav button.active { background: var(--surface2); color: var(--accent); border: 1px solid var(--border); }
+  .badge-danger { background: var(--danger); color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 10px; margin-left: 4px; vertical-align: middle; }
+
+  /* LAYOUT */
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title::before { content: ''; display: block; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+
+  /* FORM ELEMENTS */
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
+  input, textarea, select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text-bright); padding: 9px 12px; font-size: 13px; outline: none; transition: border .15s; font-family: inherit;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+  .input-row { display: flex; gap: 10px; }
+  .input-row input { flex: 1; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: #0d1117; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { filter: brightness(1.1); }
+  .btn-ghost { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-success { background: var(--accent2); color: #fff; }
+  .btn-success:hover { filter: brightness(1.1); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* TAGS / BADGES */
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .tag-danger { background: rgba(248,81,73,.15); color: var(--danger); border: 1px solid rgba(248,81,73,.3); }
+  .tag-warn { background: rgba(227,179,65,.12); color: var(--warn); border: 1px solid rgba(227,179,65,.3); }
+  .tag-safe { background: rgba(0,212,170,.1); color: var(--accent); border: 1px solid rgba(0,212,170,.25); }
+  .tag-info { background: rgba(88,166,255,.1); color: var(--info); border: 1px solid rgba(88,166,255,.25); }
+  .tag-neutral { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* RESULT BOX */
+  .result-box { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 14px; display: none; }
+  .result-box.show { display: block; }
+  .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+  .result-title { font-size: 15px; font-weight: 700; color: var(--text-bright); word-break: break-all; }
+  .verdict { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .verdict.clean { color: var(--accent); }
+  .verdict.malicious { color: var(--danger); }
+  .verdict.suspicious { color: var(--warn); }
+  .verdict.unknown { color: var(--text-muted); }
+
+  /* STATS ROW */
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+  .stat-box { flex: 1; min-width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; text-align: center; }
+  .stat-box .val { font-size: 22px; font-weight: 800; }
+  .stat-box .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .stat-box.red .val { color: var(--danger); }
+  .stat-box.green .val { color: var(--accent); }
+  .stat-box.yellow .val { color: var(--warn); }
+  .stat-box.blue .val { color: var(--info); }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(48,54,61,.5); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .mono { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: var(--info); }
+
+  /* LOADING */
+  .loading { display: none; align-items: center; gap: 10px; color: var(--text-muted); padding: 10px 0; }
+  .loading.show { display: flex; }
+  .spin { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* DASHBOARD */
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .dash-card .icon { font-size: 26px; }
+  .dash-card .num { font-size: 28px; font-weight: 800; color: var(--text-bright); }
+  .dash-card .desc { font-size: 12px; color: var(--text-muted); }
+
+  /* HISTORY TABLE */
+  .history-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(48,54,61,.5); }
+  .history-item:last-child { border-bottom: none; }
+  .history-icon { font-size: 18px; flex-shrink: 0; }
+  .history-meta { flex: 1; min-width: 0; }
+  .history-target { font-weight: 600; color: var(--text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* REPORT */
+  .report-preview { background: #fff; color: #1a1a2e; border-radius: var(--radius); padding: 32px; margin-top: 14px; font-family: 'Segoe UI', sans-serif; display: none; }
+  .report-preview.show { display: block; }
+  .report-preview h1 { font-size: 22px; color: #0a0e1a; border-bottom: 3px solid #00d4aa; padding-bottom: 10px; margin-bottom: 16px; }
+  .report-preview h2 { font-size: 15px; color: #0a0e1a; margin: 18px 0 8px; }
+  .report-preview table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  .report-preview th { background: #f3f4f6; padding: 8px 12px; text-align: left; font-size: 12px; }
+  .report-preview td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+  .report-preview .r-danger { color: #dc2626; font-weight: 700; }
+  .report-preview .r-safe { color: #059669; font-weight: 700; }
+  .report-preview .r-warn { color: #d97706; font-weight: 700; }
+  .report-preview .r-footer { margin-top: 24px; font-size: 11px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+
+  /* SETTINGS */
+  .setting-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid rgba(48,54,61,.5); }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-info { flex: 1; }
+  .setting-name { font-weight: 600; color: var(--text-bright); }
+  .setting-desc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .setting-control { flex-shrink: 0; min-width: 200px; }
+
+  /* CVE CARD */
+  .cve-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+  .cve-card .cve-id { font-weight: 700; color: var(--info); font-size: 13px; }
+  .cve-card .cve-desc { font-size: 12px; color: var(--text); margin: 6px 0; line-height: 1.5; }
+  .cve-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .cvss-bar { height: 6px; background: var(--border); border-radius: 3px; flex: 1; min-width: 80px; max-width: 120px; overflow: hidden; }
+  .cvss-fill { height: 100%; border-radius: 3px; }
+
+  /* PROGRESS */
+  .scan-progress { background: var(--border); border-radius: 3px; height: 4px; overflow: hidden; margin-top: 8px; display: none; }
+  .scan-progress.show { display: block; }
+  .scan-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #58a6ff); border-radius: 3px; transition: width .3s; }
+
+  /* ALERT */
+  .alert { border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; }
+  .alert-info { background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.25); color: var(--info); }
+  .alert-warn { background: rgba(227,179,65,.08); border: 1px solid rgba(227,179,65,.25); color: var(--warn); }
+  .alert-danger { background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.25); color: var(--danger); }
+  .alert-success { background: rgba(0,212,170,.07); border: 1px solid rgba(0,212,170,.2); color: var(--accent); }
+
+  /* API KEY NOTICE */
+  .api-notice { background: rgba(88,166,255,.07); border: 1px solid rgba(88,166,255,.2); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; font-size: 12px; color: var(--info); line-height: 1.6; }
+  .api-notice a { color: var(--accent); }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    nav button span { display: none; }
+    .input-row { flex-direction: column; }
+    .stats-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <path d="M9 12l2 2 4-4" stroke="#00d4aa"/>
+    </svg>
+    <span><em>Secure</em>Watch</span>
+  </div>
+  <nav>
+    <button class="active" onclick="goto('dashboard')"><span>📊 </span>Dashboard</button>
+    <button onclick="goto('url')"><span>🔗 </span>URLs</button>
+    <button onclick="goto('hash')"><span>🦠 </span>Arquivos</button>
+    <button onclick="goto('ip')"><span>🌐 </span>IP/Domínio</button>
+    <button onclick="goto('cve')"><span>🛡️ </span>CVEs</button>
+    <button onclick="goto('report')"><span>📄 </span>Relatório</button>
+    <button onclick="goto('settings')"><span>⚙️ </span>Config</button>
+  </nav>
+</header>
+
+<!-- ======================== DASHBOARD ======================== -->
+<div id="page-dashboard" class="page active container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Painel de Controle</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Visão geral das análises realizadas nesta sessão.</p>
+
+  <div class="dash-grid">
+    <div class="dash-card">
+      <div class="icon">🔗</div>
+      <div class="num" id="count-url">0</div>
+      <div class="desc">URLs analisadas</div>
+    </div>
+    <div class="dash-card">
+      <div class="icon">🦠</div>
+      <div class="num" id="count-hash">0</div>
+      <div class="desc">Hashes verificados</div>
+    </div>
+    <div class="dash-card">
+      <div class="icon">🌐</div>
+      <div class="num" id="count-ip">0</div>
+      <div class="desc">IPs/Domínios analisados</div>
+    </div>
+    <div class="dash-card">
+      <div class="icon">🛡️</div>
+      <div class="num" id="count-cve">0</div>
+      <div class="desc">CVEs pesquisadas</div>
+    </div>
+    <div class="dash-card" style="border-color:rgba(248,81,73,.35)">
+      <div class="icon">🚨</div>
+      <div class="num" id="count-threats" style="color:var(--danger)">0</div>
+      <div class="desc">Ameaças detectadas</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Histórico Recente</div>
+    <div id="history-list">
+      <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;">Nenhuma análise realizada ainda. Use os módulos acima para começar.</p>
+    </div>
+  </div>
+
+  <div class="card" style="background:linear-gradient(135deg,rgba(0,212,170,.07),rgba(88,166,255,.05));border-color:rgba(0,212,170,.2)">
+    <div class="card-title">Início Rápido</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="goto('url')">🔗 Analisar URL</button>
+      <button class="btn btn-ghost" onclick="goto('hash')">🦠 Verificar Hash</button>
+      <button class="btn btn-ghost" onclick="goto('ip')">🌐 Analisar IP</button>
+      <button class="btn btn-ghost" onclick="goto('cve')">🛡️ Buscar CVE</button>
+      <button class="btn btn-ghost" onclick="goto('settings')">⚙️ Configurar APIs</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== URL ANALYSIS ======================== -->
+<div id="page-url" class="page container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Análise de URLs e Links</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Verifique se URLs são maliciosas, de phishing ou suspeitas.</p>
+
+  <div class="api-notice">
+    ℹ️ Esta análise usa a <strong>VirusTotal API</strong> (configurada em ⚙️ Config) e a base pública do <strong>URLhaus</strong> (sem chave). Configure sua chave VT para resultados completos de 70+ engines.
+  </div>
+
+  <div class="card">
+    <div class="card-title">Inserir URL para análise</div>
+    <div class="form-group">
+      <label>URL / Link</label>
+      <div class="input-row">
+        <input id="url-input" type="text" placeholder="https://exemplo-suspeito.com/pagina" />
+        <button class="btn btn-primary" onclick="analyzeURL()">🔍 Analisar</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Análise em lote (uma URL por linha)</label>
+      <textarea id="url-batch" placeholder="https://site1.com&#10;https://site2.com&#10;https://site3.com"></textarea>
+    </div>
+    <button class="btn btn-ghost" onclick="analyzeBatch()">📋 Analisar em Lote</button>
+    <div class="loading" id="url-loading"><div class="spin"></div> Consultando engines de detecção...</div>
+    <div class="scan-progress" id="url-progress"><div class="scan-progress-fill" id="url-progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="result-box" id="url-result">
+    <div class="result-header">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">ALVO ANALISADO</div>
+        <div class="result-title" id="url-result-target"></div>
+      </div>
+      <div class="verdict" id="url-verdict"></div>
+    </div>
+    <div class="stats-row" id="url-stats"></div>
+    <div id="url-details"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="addToReport('url')">📄 Adicionar ao Relatório</button>
+      <button class="btn btn-ghost" id="url-vt-link" style="display:none" onclick="">🔗 Ver no VirusTotal</button>
+    </div>
+  </div>
+
+  <div class="result-box show" id="url-batch-result" style="display:none;">
+    <div class="card-title">Resultados em Lote</div>
+    <table>
+      <thead><tr><th>URL</th><th>Status</th><th>Veredicto</th><th>Detalhes</th></tr></thead>
+      <tbody id="url-batch-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ======================== HASH / MALWARE ======================== -->
+<div id="page-hash" class="page container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Análise de Arquivos / Malware</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Verifique hashes MD5, SHA-1 ou SHA-256 de arquivos suspeitos.</p>
+
+  <div class="api-notice">
+    ℹ️ Esta análise usa a <strong>VirusTotal API</strong>. Você também pode calcular o hash de um arquivo localmente e verificá-lo aqui. <strong>Nunca envie arquivos sensíveis diretamente.</strong>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Verificar Hash de Arquivo</div>
+    <div class="form-group">
+      <label>Hash (MD5 / SHA-1 / SHA-256)</label>
+      <div class="input-row">
+        <input id="hash-input" type="text" placeholder="e.g. 44d88612fea8a8f36de82e1278abb02f" />
+        <button class="btn btn-primary" onclick="analyzeHash()">🔍 Verificar</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Calcular hash de arquivo local (sem upload)</label>
+      <input type="file" id="file-local" onchange="calcHash(this)" style="padding:6px;" />
+      <div id="hash-calc-result" style="margin-top:8px;font-family:monospace;font-size:12px;color:var(--info);"></div>
+    </div>
+    <div class="loading" id="hash-loading"><div class="spin"></div> Consultando base de 70+ antivírus...</div>
+  </div>
+
+  <div class="result-box" id="hash-result">
+    <div class="result-header">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">HASH ANALISADO</div>
+        <div class="result-title mono" id="hash-result-target"></div>
+      </div>
+      <div class="verdict" id="hash-verdict"></div>
+    </div>
+    <div class="stats-row" id="hash-stats"></div>
+    <div id="hash-details"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <button class="btn btn-ghost" onclick="addToReport('hash')">📄 Adicionar ao Relatório</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== IP / DOMAIN ======================== -->
+<div id="page-ip" class="page container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Análise de IP e Domínio</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Verifique a reputação de endereços IP e domínios usando AbuseIPDB e VirusTotal.</p>
+
+  <div class="api-notice">
+    ℹ️ Reputação de IPs via <strong>AbuseIPDB</strong> (configure em ⚙️ Config) + informações de domínio via <strong>VirusTotal API</strong>.
+  </div>
+
+  <div class="card">
+    <div class="card-title">IP ou Domínio</div>
+    <div class="form-group">
+      <label>Endereço IP ou Domínio</label>
+      <div class="input-row">
+        <input id="ip-input" type="text" placeholder="192.168.1.1 ou malicioso.com" />
+        <button class="btn btn-primary" onclick="analyzeIP()">🔍 Analisar</button>
+      </div>
+    </div>
+    <div class="loading" id="ip-loading"><div class="spin"></div> Consultando bases de reputação...</div>
+  </div>
+
+  <div class="result-box" id="ip-result">
+    <div class="result-header">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">ALVO ANALISADO</div>
+        <div class="result-title" id="ip-result-target"></div>
+      </div>
+      <div class="verdict" id="ip-verdict"></div>
+    </div>
+    <div class="stats-row" id="ip-stats"></div>
+    <div id="ip-details"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <button class="btn btn-ghost" onclick="addToReport('ip')">📄 Adicionar ao Relatório</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== CVE ======================== -->
+<div id="page-cve" class="page container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Pesquisa de Vulnerabilidades (CVEs)</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Busque vulnerabilidades conhecidas na base NIST NVD — sem necessidade de chave de API.</p>
+
+  <div class="card">
+    <div class="card-title">Buscar CVE</div>
+    <div class="form-group">
+      <label>ID CVE, produto ou palavra-chave</label>
+      <div class="input-row">
+        <input id="cve-input" type="text" placeholder="CVE-2024-1234 ou 'Apache Log4j'" />
+        <button class="btn btn-primary" onclick="searchCVE()">🔍 Buscar</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="document.getElementById('cve-input').value='CVE-2021-44228';searchCVE()">Log4Shell</button>
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="document.getElementById('cve-input').value='CVE-2021-34527';searchCVE()">PrintNightmare</button>
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="document.getElementById('cve-input').value='CVE-2023-44487';searchCVE()">HTTP/2 RapidReset</button>
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="document.getElementById('cve-input').value='CVE-2024-3400';searchCVE()">PAN-OS RCE</button>
+    </div>
+    <div class="loading" id="cve-loading"><div class="spin"></div> Consultando NIST NVD...</div>
+  </div>
+
+  <div id="cve-results"></div>
+</div>
+
+<!-- ======================== REPORT ======================== -->
+<div id="page-report" class="page container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Gerador de Relatório</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Compile todas as análises em um relatório formatado para enviar por e-mail aos colaboradores.</p>
+
+  <div class="card">
+    <div class="card-title">Configurar Relatório</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="form-group" style="margin:0">
+        <label>Empresa / Organização</label>
+        <input id="rep-org" type="text" placeholder="Acme Corp" />
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Analista responsável</label>
+        <input id="rep-analyst" type="text" placeholder="João Silva" />
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Nível de confidencialidade</label>
+        <select id="rep-level">
+          <option>🔓 Público</option>
+          <option selected>🔒 Interno</option>
+          <option>🔴 Confidencial</option>
+          <option>⛔ Restrito</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Destinatários (e-mails separados por vírgula)</label>
+        <input id="rep-emails" type="text" placeholder="ti@empresa.com, seguranca@empresa.com" />
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label>Observações adicionais</label>
+      <textarea id="rep-notes" placeholder="Adicione contexto, recomendações ou observações para os destinatários..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+      <button class="btn btn-primary" onclick="generateReport()">📄 Gerar Relatório</button>
+      <button class="btn btn-ghost" onclick="copyReport()">📋 Copiar HTML do E-mail</button>
+      <button class="btn btn-ghost" onclick="clearReport()">🗑️ Limpar Análises</button>
+    </div>
+  </div>
+
+  <div id="report-items-card" class="card">
+    <div class="card-title">Itens no Relatório (<span id="report-count">0</span>)</div>
+    <div id="report-items-list">
+      <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">Nenhum item adicionado. Realize análises e clique em "Adicionar ao Relatório".</p>
+    </div>
+  </div>
+
+  <div class="report-preview" id="report-preview"></div>
+</div>
+
+<!-- ======================== SETTINGS ======================== -->
+<div id="page-settings" class="page container">
+  <h2 style="color:var(--text-bright);font-size:20px;margin-bottom:6px;">Configurações</h2>
+  <p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Configure suas chaves de API para habilitar todas as funcionalidades.</p>
+
+  <div class="card">
+    <div class="card-title">Chaves de API</div>
+    <div class="alert alert-info">ℹ️ As chaves são salvas apenas no seu navegador (localStorage) e nunca enviadas a terceiros exceto às respectivas APIs.</div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">VirusTotal API Key</div>
+        <div class="setting-desc">Necessária para análise de URLs, hashes e domínios. <a href="https://www.virustotal.com/gui/join-us" target="_blank" style="color:var(--accent)">Obtenha gratuita →</a></div>
+      </div>
+      <div class="setting-control">
+        <input type="password" id="vt-key" placeholder="Cole sua chave aqui" />
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-name">AbuseIPDB API Key</div>
+        <div class="setting-desc">Para verificação de reputação de IPs. <a href="https://www.abuseipdb.com/register" target="_blank" style="color:var(--accent)">Obtenha gratuita →</a></div>
+      </div>
+      <div class="setting-control">
+        <input type="password" id="abuseip-key" placeholder="Cole sua chave aqui" />
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveKeys()">💾 Salvar Chaves</button>
+      <button class="btn btn-ghost" onclick="clearKeys()">🗑️ Limpar</button>
+    </div>
+    <div id="save-msg" style="margin-top:10px;font-size:13px;display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Modo de Demonstração</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Sem chaves configuradas, a plataforma opera em <strong style="color:var(--warn)">modo demo</strong> com dados simulados realistas para visualização das funcionalidades.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="runDemo('url')">🔗 Demo URL</button>
+      <button class="btn btn-ghost" onclick="runDemo('hash')">🦠 Demo Hash</button>
+      <button class="btn btn-ghost" onclick="runDemo('ip')">🌐 Demo IP</button>
+      <button class="btn btn-ghost" onclick="runDemo('cve')">🛡️ Demo CVE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================== STATE ========================
+const state = {
+  counts: { url: 0, hash: 0, ip: 0, cve: 0, threats: 0 },
+  history: [],
+  reportItems: [],
+  lastResults: {}
+};
+
+// ======================== NAV ========================
+function goto(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('nav button')[['dashboard','url','hash','ip','cve','report','settings'].indexOf(page)].classList.add('active');
+}
+
+// ======================== KEYS ========================
+function getKeys() {
+  return {
+    vt: localStorage.getItem('sw_vt_key') || '',
+    abuse: localStorage.getItem('sw_abuse_key') || ''
+  };
+}
+function saveKeys() {
+  localStorage.setItem('sw_vt_key', document.getElementById('vt-key').value.trim());
+  localStorage.setItem('sw_abuse_key', document.getElementById('abuseip-key').value.trim());
+  const msg = document.getElementById('save-msg');
+  msg.style.display = 'block';
+  msg.innerHTML = '<span style="color:var(--accent)">✅ Chaves salvas com sucesso!</span>';
+  setTimeout(() => msg.style.display = 'none', 3000);
+}
+function clearKeys() {
+  localStorage.removeItem('sw_vt_key'); localStorage.removeItem('sw_abuse_key');
+  document.getElementById('vt-key').value = '';
+  document.getElementById('abuseip-key').value = '';
+}
+window.addEventListener('load', () => {
+  const k = getKeys();
+  if (k.vt) document.getElementById('vt-key').value = k.vt;
+  if (k.abuse) document.getElementById('abuseip-key').value = k.abuse;
+});
+
+// ======================== UTILS ========================
+function recordHistory(type, target, verdict, isThreat) {
+  const icons = { url: '🔗', hash: '🦠', ip: '🌐', cve: '🛡️' };
+  state.counts[type]++;
+  if (isThreat) state.counts.threats++;
+  state.history.unshift({ type, target, verdict, isThreat, time: new Date() });
+  if (state.history.length > 30) state.history.pop();
+  updateDash();
+}
+
+function updateDash() {
+  document.getElementById('count-url').textContent = state.counts.url;
+  document.getElementById('count-hash').textContent = state.counts.hash;
+  document.getElementById('count-ip').textContent = state.counts.ip;
+  document.getElementById('count-cve').textContent = state.counts.cve;
+  document.getElementById('count-threats').textContent = state.counts.threats;
+
+  const list = document.getElementById('history-list');
+  if (!state.history.length) return;
+  const icons = { url: '🔗', hash: '🦠', ip: '🌐', cve: '🛡️' };
+  list.innerHTML = state.history.slice(0, 10).map(h => `
+    <div class="history-item">
+      <div class="history-icon">${icons[h.type]}</div>
+      <div class="history-meta">
+        <div class="history-target">${h.target}</div>
+        <div class="history-time">${h.time.toLocaleTimeString('pt-BR')} — ${h.verdict}</div>
+      </div>
+      <span class="tag ${h.isThreat ? 'tag-danger' : 'tag-safe'}">${h.isThreat ? '⚠ Ameaça' : '✓ Seguro'}</span>
+    </div>
+  `).join('');
+}
+
+function showLoading(id, show) {
+  document.getElementById(id).classList.toggle('show', show);
+}
+
+function animateProgress(fillId, barId, duration = 1800) {
+  const bar = document.getElementById(barId);
+  const fill = document.getElementById(fillId);
+  bar.classList.add('show');
+  let w = 0;
+  const step = setInterval(() => {
+    w = Math.min(w + Math.random() * 8, 90);
+    fill.style.width = w + '%';
+    if (w >= 90) clearInterval(step);
+  }, duration / 20);
+  return () => { fill.style.width = '100%'; setTimeout(() => bar.classList.remove('show'), 400); };
+}
+
+// ======================== VIRUSTOTAL API ========================
+async function vtRequest(endpoint, method = 'GET', body = null) {
+  const key = getKeys().vt;
+  if (!key) return null;
+  const opts = { method, headers: { 'x-apikey': key } };
+  if (body) { opts.body = body; }
+  try {
+    const r = await fetch('https://www.virustotal.com/api/v3/' + endpoint, opts);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function vtAnalyzeUrl(url) {
+  const form = new URLSearchParams(); form.append('url', url);
+  const sub = await vtRequest('urls', 'POST', form);
+  if (!sub) return null;
+  const id = sub.data?.id;
+  if (!id) return null;
+  await new Promise(r => setTimeout(r, 2000));
+  return await vtRequest('analyses/' + id);
+}
+
+// ======================== URLHAUS CHECK ========================
+async function urlhausCheck(url) {
+  try {
+    const form = new URLSearchParams(); form.append('url', url);
+    const r = await fetch('https://urlhaus-api.abuse.ch/v1/url/', { method: 'POST', body: form });
+    return await r.json();
+  } catch { return null; }
+}
+
+// ======================== URL ANALYSIS ========================
+async function analyzeURL() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return alert('Digite uma URL.');
+  const finishProgress = animateProgress('url-progress-fill', 'url-progress');
+  showLoading('url-loading', true);
+  document.getElementById('url-result').classList.remove('show');
+
+  const key = getKeys().vt;
+  let data = null;
+  let uhData = null;
+
+  if (key) {
+    [data, uhData] = await Promise.all([vtAnalyzeUrl(url), urlhausCheck(url)]);
+  } else {
+    await new Promise(r => setTimeout(r, 2000));
+    data = demoVTResult(url, 'url');
+    uhData = demoUHResult(url);
+  }
+
+  finishProgress();
+  showLoading('url-loading', false);
+  renderURLResult(url, data, uhData);
+  recordHistory('url', url, getVerdict(data, uhData).label, getVerdict(data, uhData).isThreat);
+  state.lastResults.url = { url, data, uhData };
+}
+
+function getVerdict(vtData, uhData) {
+  const stats = vtData?.data?.attributes?.stats || {};
+  const mal = (stats.malicious || 0);
+  const sus = (stats.suspicious || 0);
+  const uhThreat = uhData?.query_status === 'is_listed';
+
+  if (mal >= 5 || uhThreat) return { label: '🚨 MALICIOSO', cls: 'malicious', isThreat: true, emoji: '🚨' };
+  if (mal > 0 || sus > 2) return { label: '⚠️ SUSPEITO', cls: 'suspicious', isThreat: true, emoji: '⚠️' };
+  if (vtData) return { label: '✅ LIMPO', cls: 'clean', isThreat: false, emoji: '✅' };
+  return { label: '❓ DESCONHECIDO', cls: 'unknown', isThreat: false, emoji: '❓' };
+}
+
+function renderURLResult(url, vtData, uhData) {
+  const stats = vtData?.data?.attributes?.stats || {};
+  const mal = stats.malicious || 0;
+  const sus = stats.suspicious || 0;
+  const clean = stats.harmless || 0;
+  const undetected = stats.undetected || 0;
+  const total = mal + sus + clean + undetected;
+  const v = getVerdict(vtData, uhData);
+
+  document.getElementById('url-result-target').textContent = url;
+  document.getElementById('url-verdict').className = 'verdict ' + v.cls;
+  document.getElementById('url-verdict').textContent = v.label;
+
+  document.getElementById('url-stats').innerHTML = `
+    <div class="stat-box red"><div class="val">${mal}</div><div class="lbl">Maliciosas</div></div>
+    <div class="stat-box yellow"><div class="val">${sus}</div><div class="lbl">Suspeitas</div></div>
+    <div class="stat-box green"><div class="val">${clean}</div><div class="lbl">Limpas</div></div>
+    <div class="stat-box blue"><div class="val">${total}</div><div class="lbl">Total Engines</div></div>
+  `;
+
+  const uhSection = uhData ? `
+    <div style="margin-top:14px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">URLhaus</div>
+      ${uhData.query_status === 'is_listed'
+        ? `<div class="alert alert-danger">🚨 URL listada no URLhaus como <strong>${uhData.tags?.join(', ') || 'maliciosa'}</strong></div>`
+        : `<div class="alert alert-success">✅ Não encontrada na base URLhaus</div>`
+      }
+    </div>` : '';
+
+  const engines = vtData?.data?.attributes?.results || {};
+  const malEngines = Object.entries(engines).filter(([,v]) => v.category === 'malicious').slice(0, 8);
+  const enginesTable = malEngines.length ? `
+    <div style="margin-top:14px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Engines que detectaram ameaça</div>
+      <table>
+        <thead><tr><th>Engine</th><th>Categoria</th><th>Nome da Ameaça</th></tr></thead>
+        <tbody>${malEngines.map(([name, r]) => `<tr><td>${name}</td><td><span class="tag tag-danger">${r.category}</span></td><td class="mono">${r.result || '—'}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  document.getElementById('url-details').innerHTML = uhSection + enginesTable;
+
+  const vtBtn = document.getElementById('url-vt-link');
+  vtBtn.style.display = vtData ? 'inline-flex' : 'none';
+  const b64 = btoa(url).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  vtBtn.onclick = () => window.open('https://www.virustotal.com/gui/url/' + b64, '_blank');
+
+  document.getElementById('url-result').classList.add('show');
+}
+
+async function analyzeBatch() {
+  const lines = document.getElementById('url-batch').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return alert('Insira URLs no campo de lote.');
+  const tbody = document.getElementById('url-batch-tbody');
+  tbody.innerHTML = '';
+  document.getElementById('url-batch-result').style.display = 'block';
+  showLoading('url-loading', true);
+
+  for (const url of lines) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="mono">${url}</td><td><span class="tag tag-neutral">⏳ Aguardando</span></td><td>—</td><td>—</td>`;
+    tbody.appendChild(tr);
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const url = lines[i];
+    const [vtData, uhData] = getKeys().vt
+      ? await Promise.all([vtAnalyzeUrl(url), urlhausCheck(url)])
+      : [demoVTResult(url, 'url'), demoUHResult(url)];
+
+    const v = getVerdict(vtData, uhData);
+    const row = tbody.children[i];
+    const stats = vtData?.data?.attributes?.stats || {};
+    row.children[1].innerHTML = `<span class="tag tag-neutral">✓ Concluído</span>`;
+    row.children[2].innerHTML = `<span class="tag ${v.isThreat ? 'tag-danger' : 'tag-safe'}">${v.label}</span>`;
+    row.children[3].textContent = `${stats.malicious || 0} maliciosas / ${(stats.malicious||0)+(stats.suspicious||0)+(stats.harmless||0)+(stats.undetected||0)} engines`;
+    recordHistory('url', url, v.label, v.isThreat);
+    await new Promise(r => setTimeout(r, 500));
+  }
+  showLoading('url-loading', false);
+}
+
+// ======================== HASH ANALYSIS ========================
+async function calcHash(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const buf = await file.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  const hex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  document.getElementById('hash-calc-result').textContent = 'SHA-256: ' + hex;
+  document.getElementById('hash-input').value = hex;
+}
+
+async function analyzeHash() {
+  const hash = document.getElementById('hash-input').value.trim();
+  if (!hash) return alert('Digite um hash.');
+  showLoading('hash-loading', true);
+  document.getElementById('hash-result').classList.remove('show');
+
+  let data = null;
+  if (getKeys().vt) {
+    data = await vtRequest('files/' + hash);
+  } else {
+    await new Promise(r => setTimeout(r, 1800));
+    data = demoVTResult(hash, 'hash');
+  }
+
+  showLoading('hash-loading', false);
+  renderHashResult(hash, data);
+  const stats = data?.data?.attributes?.last_analysis_stats || {};
+  const isThreat = (stats.malicious || 0) > 0;
+  recordHistory('hash', hash.substring(0, 20) + '…', isThreat ? '🚨 Malware detectado' : '✅ Limpo', isThreat);
+  state.lastResults.hash = { hash, data };
+}
+
+function renderHashResult(hash, data) {
+  const attrs = data?.data?.attributes || {};
+  const stats = attrs.last_analysis_stats || {};
+  const mal = stats.malicious || 0;
+  const sus = stats.suspicious || 0;
+  const clean = stats.harmless || 0 + (stats.undetected || 0);
+  const total = mal + sus + (stats.harmless || 0) + (stats.undetected || 0);
+
+  let vClass, vLabel, isThreat;
+  if (mal >= 5) { vClass = 'malicious'; vLabel = '🚨 MALWARE'; isThreat = true; }
+  else if (mal > 0 || sus > 3) { vClass = 'suspicious'; vLabel = '⚠️ SUSPEITO'; isThreat = true; }
+  else if (data) { vClass = 'clean'; vLabel = '✅ LIMPO'; isThreat = false; }
+  else { vClass = 'unknown'; vLabel = '❓ NÃO ENCONTRADO'; isThreat = false; }
+
+  document.getElementById('hash-result-target').textContent = hash;
+  document.getElementById('hash-verdict').className = 'verdict ' + vClass;
+  document.getElementById('hash-verdict').textContent = vLabel;
+  document.getElementById('hash-stats').innerHTML = `
+    <div class="stat-box red"><div class="val">${mal}</div><div class="lbl">Detectaram</div></div>
+    <div class="stat-box yellow"><div class="val">${sus}</div><div class="lbl">Suspeitas</div></div>
+    <div class="stat-box green"><div class="val">${total}</div><div class="lbl">Total Engines</div></div>
+    <div class="stat-box blue"><div class="val">${attrs.size ? (attrs.size/1024).toFixed(1)+'KB' : '—'}</div><div class="lbl">Tamanho</div></div>
+  `;
+
+  const meta = [
+    ['Nome', attrs.meaningful_name || attrs.names?.[0] || '—'],
+    ['Tipo', attrs.type_description || attrs.magic || '—'],
+    ['Família de malware', attrs.popular_threat_classification?.suggested_threat_label || '—'],
+    ['Primeira submissão', attrs.first_submission_date ? new Date(attrs.first_submission_date*1000).toLocaleDateString('pt-BR') : '—'],
+    ['Última análise', attrs.last_analysis_date ? new Date(attrs.last_analysis_date*1000).toLocaleDateString('pt-BR') : '—']
+  ];
+
+  const engines = attrs.last_analysis_results || {};
+  const malEngines = Object.entries(engines).filter(([,v]) => v.category === 'malicious').slice(0,8);
+
+  document.getElementById('hash-details').innerHTML = `
+    <table><tbody>${meta.map(([k,v])=>`<tr><td style="color:var(--text-muted);width:160px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
+    ${malEngines.length ? `
+      <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Detecções</div>
+      <table><thead><tr><th>Antivírus</th><th>Nome da Ameaça</th></tr></thead>
+      <tbody>${malEngines.map(([n,r])=>`<tr><td>${n}</td><td class="mono">${r.result||'—'}</td></tr>`).join('')}</tbody></table>` : ''}
+  `;
+  document.getElementById('hash-result').classList.add('show');
+}
+
+// ======================== IP ANALYSIS ========================
+async function analyzeIP() {
+  const target = document.getElementById('ip-input').value.trim();
+  if (!target) return alert('Digite um IP ou domínio.');
+  showLoading('ip-loading', true);
+  document.getElementById('ip-result').classList.remove('show');
+
+  let vtData = null, abuseData = null;
+  const isIP = /^\d+\.\d+\.\d+\.\d+$/.test(target);
+  const keys = getKeys();
+
+  if (keys.vt || keys.abuse) {
+    const tasks = [];
+    if (keys.vt) tasks.push(vtRequest(isIP ? 'ip_addresses/' + target : 'domains/' + target));
+    else tasks.push(Promise.resolve(null));
+    if (keys.abuse && isIP) {
+      tasks.push(fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${target}&maxAgeInDays=90`, {
+        headers: { 'Key': keys.abuse, 'Accept': 'application/json' }
+      }).then(r => r.json()).catch(() => null));
+    } else tasks.push(Promise.resolve(null));
+    [vtData, abuseData] = await Promise.all(tasks);
+  } else {
+    await new Promise(r => setTimeout(r, 1500));
+    vtData = demoVTResult(target, 'ip');
+    abuseData = isIP ? demoAbuseResult(target) : null;
+  }
+
+  showLoading('ip-loading', false);
+  renderIPResult(target, vtData, abuseData, isIP);
+  const isThreat = (vtData?.data?.attributes?.last_analysis_stats?.malicious || 0) > 3 || (abuseData?.data?.abuseConfidenceScore || 0) > 50;
+  recordHistory('ip', target, isThreat ? '🚨 Reputação Negativa' : '✅ OK', isThreat);
+  state.lastResults.ip = { target, vtData, abuseData };
+}
+
+function renderIPResult(target, vtData, abuseData, isIP) {
+  const attrs = vtData?.data?.attributes || {};
+  const stats = attrs.last_analysis_stats || {};
+  const mal = stats.malicious || 0;
+  const abuseScore = abuseData?.data?.abuseConfidenceScore ?? null;
+
+  let vClass, vLabel, isThreat;
+  if (mal >= 5 || abuseScore >= 75) { vClass = 'malicious'; vLabel = '🚨 MALICIOSO'; isThreat = true; }
+  else if (mal > 0 || abuseScore >= 25) { vClass = 'suspicious'; vLabel = '⚠️ SUSPEITO'; isThreat = true; }
+  else { vClass = 'clean'; vLabel = '✅ LIMPO'; isThreat = false; }
+
+  document.getElementById('ip-result-target').textContent = target;
+  document.getElementById('ip-verdict').className = 'verdict ' + vClass;
+  document.getElementById('ip-verdict').textContent = vLabel;
+
+  document.getElementById('ip-stats').innerHTML = `
+    <div class="stat-box red"><div class="val">${mal}</div><div class="lbl">VT Maliciosas</div></div>
+    <div class="stat-box ${abuseScore > 50 ? 'red' : abuseScore > 0 ? 'yellow' : 'green'}">
+      <div class="val">${abuseScore !== null ? abuseScore + '%' : '—'}</div>
+      <div class="lbl">Abuso Conf.</div>
+    </div>
+    <div class="stat-box blue"><div class="val">${attrs.country || '—'}</div><div class="lbl">País</div></div>
+    <div class="stat-box blue"><div class="val">${abuseData?.data?.totalReports ?? '—'}</div><div class="lbl">Relatórios</div></div>
+  `;
+
+  const meta = [
+    ['AS Number', attrs.asn || abuseData?.data?.abuseConfidenceScore !== undefined ? (attrs.asn || '—') : '—'],
+    ['Proprietário', attrs.as_owner || abuseData?.data?.isp || '—'],
+    ['País', attrs.country || abuseData?.data?.countryCode || '—'],
+    ['Hostname', abuseData?.data?.hostnames?.[0] || attrs.last_https_certificate?.subject?.CN || '—'],
+    ['Última análise VT', attrs.last_analysis_date ? new Date(attrs.last_analysis_date*1000).toLocaleDateString('pt-BR') : '—']
+  ];
+
+  const engines = attrs.last_analysis_results || {};
+  const malEngines = Object.entries(engines).filter(([,v]) => v.category === 'malicious').slice(0,6);
+
+  document.getElementById('ip-details').innerHTML = `
+    <table><tbody>${meta.map(([k,v])=>`<tr><td style="color:var(--text-muted);width:160px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
+    ${abuseData?.data ? `
+      <div class="alert ${abuseScore > 50 ? 'alert-danger' : abuseScore > 20 ? 'alert-warn' : 'alert-success'}" style="margin-top:12px;">
+        AbuseIPDB: ${abuseScore}% confiança de abuso — ${abuseData.data.totalReports} relatórios nos últimos 90 dias — ISP: ${abuseData.data.isp || '—'}
+      </div>` : ''}
+    ${malEngines.length ? `
+      <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Engines que detectaram ameaça</div>
+      <table><thead><tr><th>Engine</th><th>Resultado</th></tr></thead>
+      <tbody>${malEngines.map(([n,r])=>`<tr><td>${n}</td><td class="mono">${r.result||r.category}</td></tr>`).join('')}</tbody></table>` : ''}
+  `;
+  document.getElementById('ip-result').classList.add('show');
+}
+
+// ======================== CVE ========================
+async function searchCVE() {
+  const q = document.getElementById('cve-input').value.trim();
+  if (!q) return alert('Digite um termo de busca.');
+  showLoading('cve-loading', true);
+  document.getElementById('cve-results').innerHTML = '';
+
+  const isCVE = /^CVE-\d{4}-\d+$/i.test(q);
+  const url = isCVE
+    ? `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${q.toUpperCase()}`
+    : `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(q)}&resultsPerPage=10`;
+
+  let cves = [];
+  try {
+    const r = await fetch(url);
+    const json = await r.json();
+    cves = json.vulnerabilities || [];
+  } catch {
+    cves = demoCVEResult(q);
+  }
+
+  showLoading('cve-loading', false);
+  state.counts.cve++;
+  updateDash();
+
+  if (!cves.length) {
+    document.getElementById('cve-results').innerHTML = '<div class="alert alert-info">Nenhuma CVE encontrada para este termo.</div>';
+    return;
+  }
+
+  const html = cves.map(item => {
+    const cve = item.cve;
+    const id = cve.id;
+    const desc = cve.descriptions?.find(d => d.lang === 'en')?.value || cve.descriptions?.[0]?.value || 'Sem descrição';
+    const cvssV3 = cve.metrics?.cvssMetricV31?.[0]?.cvssData || cve.metrics?.cvssMetricV30?.[0]?.cvssData;
+    const score = cvssV3?.baseScore;
+    const severity = cvssV3?.baseSeverity;
+    const pub = cve.published ? new Date(cve.published).toLocaleDateString('pt-BR') : '—';
+    const scoreColor = score >= 9 ? 'var(--danger)' : score >= 7 ? 'var(--warn)' : score >= 4 ? 'var(--info)' : 'var(--accent)';
+    const fillPct = score ? (score / 10 * 100) + '%' : '0%';
+
+    return `
+      <div class="cve-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+          <span class="cve-id">${id}</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${score ? `<span style="color:${scoreColor};font-weight:800;font-size:15px;">${score}</span>` : ''}
+            ${severity ? `<span class="tag ${score>=9?'tag-danger':score>=7?'tag-warn':score>=4?'tag-info':'tag-safe'}">${severity}</span>` : ''}
+            <span class="tag tag-neutral">${pub}</span>
+          </div>
+        </div>
+        <div class="cve-desc">${desc.length > 250 ? desc.substring(0,250)+'…' : desc}</div>
+        <div class="cve-meta">
+          ${score ? `<div class="cvss-bar"><div class="cvss-fill" style="width:${fillPct};background:${scoreColor}"></div></div>` : ''}
+          <span style="font-size:11px;color:var(--text-muted)">CVSS ${score || '—'}/10</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:auto" onclick="addCVEToReport('${id}', \`${desc.replace(/`/g,'\\`').substring(0,200)}\`, ${score||0}, '${severity||''}')">+ Relatório</button>
+          <a href="https://nvd.nist.gov/vuln/detail/${id}" target="_blank" style="font-size:11px;color:var(--info);text-decoration:none;">🔗 NVD</a>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('cve-results').innerHTML = html;
+  recordHistory('cve', q, `${cves.length} CVE(s) encontrada(s)`, false);
+}
+
+// ======================== REPORT ========================
+const reportItems = [];
+
+function addToReport(type) {
+  const result = state.lastResults[type];
+  if (!result) return;
+  const typeLabel = { url: 'URL', hash: 'Hash/Malware', ip: 'IP/Domínio' };
+  let target, verdict, details;
+
+  if (type === 'url') {
+    const v = getVerdict(result.data, result.uhData);
+    const s = result.data?.data?.attributes?.stats || {};
+    target = result.url;
+    verdict = v.label;
+    details = `${s.malicious||0} maliciosas, ${s.suspicious||0} suspeitas de ${(s.malicious||0)+(s.suspicious||0)+(s.harmless||0)+(s.undetected||0)} engines`;
+  } else if (type === 'hash') {
+    const s = result.data?.data?.attributes?.last_analysis_stats || {};
+    const mal = s.malicious || 0;
+    target = result.hash;
+    verdict = mal >= 5 ? '🚨 MALWARE' : mal > 0 ? '⚠️ SUSPEITO' : '✅ LIMPO';
+    details = `${mal} de ${(s.malicious||0)+(s.suspicious||0)+(s.harmless||0)+(s.undetected||0)} engines detectaram`;
+  } else if (type === 'ip') {
+    const s = result.vtData?.data?.attributes?.last_analysis_stats || {};
+    const aScore = result.abuseData?.data?.abuseConfidenceScore ?? 0;
+    const mal = s.malicious || 0;
+    target = result.target;
+    verdict = (mal >= 5 || aScore >= 75) ? '🚨 MALICIOSO' : (mal > 0 || aScore >= 25) ? '⚠️ SUSPEITO' : '✅ LIMPO';
+    details = `VT: ${mal} detecções | AbuseIPDB: ${aScore}% confiança`;
+  }
+
+  reportItems.push({ type: typeLabel[type], target, verdict, details, time: new Date() });
+  updateReportItems();
+  const btn = document.querySelector(`[onclick="addToReport('${type}')"]`);
+  if (btn) { btn.textContent = '✅ Adicionado'; btn.disabled = true; }
+}
+
+function addCVEToReport(id, desc, score, severity) {
+  reportItems.push({
+    type: 'CVE',
+    target: id,
+    verdict: severity ? `${severity} (${score})` : 'N/A',
+    details: desc,
+    time: new Date()
+  });
+  updateReportItems();
+}
+
+function updateReportItems() {
+  document.getElementById('report-count').textContent = reportItems.length;
+  if (!reportItems.length) {
+    document.getElementById('report-items-list').innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">Nenhum item adicionado.</p>';
+    return;
+  }
+  document.getElementById('report-items-list').innerHTML = reportItems.map((item, i) => `
+    <div class="history-item">
+      <div class="history-icon">${{URL:'🔗','Hash/Malware':'🦠','IP/Domínio':'🌐',CVE:'🛡️'}[item.type]}</div>
+      <div class="history-meta">
+        <div class="history-target">[${item.type}] ${item.target}</div>
+        <div class="history-time">${item.details}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="tag ${item.verdict.includes('🚨')||item.verdict.includes('CRITICAL')||item.verdict.includes('HIGH') ? 'tag-danger' : item.verdict.includes('⚠️')||item.verdict.includes('MEDIUM') ? 'tag-warn' : 'tag-safe'}">${item.verdict}</span>
+        <button onclick="reportItems.splice(${i},1);updateReportItems()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function generateReport() {
+  const org = document.getElementById('rep-org').value || 'SecureWatch';
+  const analyst = document.getElementById('rep-analyst').value || 'Analista';
+  const level = document.getElementById('rep-level').value;
+  const emails = document.getElementById('rep-emails').value;
+  const notes = document.getElementById('rep-notes').value;
+  const now = new Date().toLocaleString('pt-BR');
+
+  const threats = reportItems.filter(i => i.verdict.includes('🚨') || i.verdict.includes('MALICIOSO') || i.verdict.includes('MALWARE'));
+  const suspicious = reportItems.filter(i => i.verdict.includes('⚠️') || i.verdict.includes('SUSPEITO'));
+  const clean = reportItems.filter(i => !threats.includes(i) && !suspicious.includes(i));
+
+  const rowColor = (v) => v.includes('🚨')||v.includes('MALICIOSO')||v.includes('MALWARE') ? 'r-danger'
+    : v.includes('⚠️')||v.includes('SUSPEITO') ? 'r-warn' : 'r-safe';
+
+  const html = `
+    <h1>🛡️ Relatório de Segurança — ${org}</h1>
+    <table>
+      <tr><th>Data/Hora</th><td>${now}</td><th>Nível</th><td>${level}</td></tr>
+      <tr><th>Analista</th><td>${analyst}</td><th>Destinatários</th><td>${emails || '—'}</td></tr>
+      <tr><th>Total analisado</th><td>${reportItems.length} itens</td><th>Ameaças</th><td class="r-danger">${threats.length} ameaça(s)</td></tr>
+    </table>
+
+    <div style="display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;">
+      <div style="flex:1;min-width:120px;background:#fef2f2;border-radius:6px;padding:12px;text-align:center;border-left:3px solid #dc2626">
+        <div style="font-size:24px;font-weight:800;color:#dc2626">${threats.length}</div>
+        <div style="font-size:11px;color:#6b7280">Ameaças</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:#fffbeb;border-radius:6px;padding:12px;text-align:center;border-left:3px solid #d97706">
+        <div style="font-size:24px;font-weight:800;color:#d97706">${suspicious.length}</div>
+        <div style="font-size:11px;color:#6b7280">Suspeitos</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:#f0fdf4;border-radius:6px;padding:12px;text-align:center;border-left:3px solid #059669">
+        <div style="font-size:24px;font-weight:800;color:#059669">${clean.length}</div>
+        <div style="font-size:11px;color:#6b7280">Limpos</div>
+      </div>
+    </div>
+
+    <h2>📋 Detalhamento das Análises</h2>
+    <table>
+      <thead><tr><th>Tipo</th><th>Alvo</th><th>Veredicto</th><th>Detalhes</th><th>Hora</th></tr></thead>
+      <tbody>
+        ${reportItems.map(i => `<tr>
+          <td>${i.type}</td>
+          <td style="font-family:monospace;font-size:12px;word-break:break-all">${i.target}</td>
+          <td class="${rowColor(i.verdict)}">${i.verdict}</td>
+          <td style="font-size:12px">${i.details}</td>
+          <td style="font-size:11px;color:#6b7280">${i.time.toLocaleTimeString('pt-BR')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+
+    ${threats.length ? `
+    <h2 style="color:#dc2626">⚠️ Ações Recomendadas</h2>
+    <ul style="padding-left:18px;font-size:13px;line-height:2">
+      ${threats.map(t => `<li>Bloquear / isolar: <strong>${t.target}</strong> — ${t.details}</li>`).join('')}
+    </ul>` : ''}
+
+    ${notes ? `<h2>📝 Observações</h2><p style="font-size:13px;line-height:1.6">${notes}</p>` : ''}
+
+    <div class="r-footer">
+      Gerado por SecureWatch em ${now} | Analista: ${analyst} | ${level}<br>
+      Este relatório contém informações de segurança. Não compartilhe externamente sem autorização.
+    </div>`;
+
+  const preview = document.getElementById('report-preview');
+  preview.innerHTML = html;
+  preview.classList.add('show');
+  preview.scrollIntoView({ behavior: 'smooth' });
+  state.lastReport = html;
+}
+
+function copyReport() {
+  if (!state.lastReport) { generateReport(); }
+  const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:'Segoe UI',sans-serif;max-width:700px;margin:0 auto;padding:24px;background:#fff;color:#1a1a2e}h1{font-size:22px;color:#0a0e1a;border-bottom:3px solid #00d4aa;padding-bottom:10px;margin-bottom:16px}h2{font-size:15px;color:#0a0e1a;margin:18px 0 8px}table{width:100%;border-collapse:collapse;margin-bottom:14px}th{background:#f3f4f6;padding:8px 12px;text-align:left;font-size:12px}td{padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px}.r-danger{color:#dc2626;font-weight:700}.r-safe{color:#059669;font-weight:700}.r-warn{color:#d97706;font-weight:700}.r-footer{margin-top:24px;font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px}</style></head><body>${state.lastReport}</body></html>`;
+  navigator.clipboard.writeText(emailHtml).then(() => alert('✅ HTML do e-mail copiado! Cole no seu cliente de e-mail ou editor HTML.'));
+}
+
+function clearReport() {
+  reportItems.length = 0;
+  updateReportItems();
+  document.getElementById('report-preview').classList.remove('show');
+}
+
+// ======================== DEMO DATA ========================
+function demoVTResult(target, type) {
+  const scenarios = ['clean','suspicious','malicious'];
+  const scenario = [target].reduce((a,c)=>a+c.charCodeAt(0),0) % 3;
+  const s = scenarios[scenario];
+  const results = {};
+  const engines = ['Google','Kaspersky','Bitdefender','ESET','Sophos','McAfee','Avast','Norton','Malwarebytes','CrowdStrike'];
+  engines.forEach(e => {
+    if (s === 'malicious' && Math.random() > 0.3) results[e] = { category: 'malicious', result: 'Trojan.GenericKD.' + Math.floor(Math.random()*9999) };
+    else if (s === 'suspicious' && Math.random() > 0.7) results[e] = { category: 'suspicious', result: 'Suspicious.Cloud.9' };
+    else results[e] = { category: 'harmless', result: null };
+  });
+  const mal = Object.values(results).filter(r=>r.category==='malicious').length;
+  const sus = Object.values(results).filter(r=>r.category==='suspicious').length;
+  return {
+    data: {
+      attributes: {
+        stats: { malicious: mal, suspicious: sus, harmless: engines.length-mal-sus, undetected: 0 },
+        last_analysis_stats: { malicious: mal, suspicious: sus, harmless: engines.length-mal-sus, undetected: 0 },
+        last_analysis_results: results,
+        country: ['BR','US','RU','CN','DE'][Math.floor(Math.random()*5)],
+        asn: 'AS' + Math.floor(Math.random()*99999),
+        as_owner: 'Demo ISP Network',
+        meaningful_name: s === 'malicious' ? 'malware_sample.exe' : 'document.pdf',
+        type_description: 'PE32 executable',
+        size: Math.floor(Math.random()*500000) + 50000,
+        popular_threat_classification: s === 'malicious' ? { suggested_threat_label: 'trojan.generic/downloader' } : null,
+        first_submission_date: Math.floor(Date.now()/1000) - 86400*30,
+        last_analysis_date: Math.floor(Date.now()/1000) - 3600
+      }
+    }
+  };
+}
+
+function demoUHResult(url) {
+  const isMal = url.includes('malware') || url.includes('phish') || url.includes('hack');
+  return { query_status: isMal ? 'is_listed' : 'no_results', tags: isMal ? ['phishing', 'malware'] : [] };
+}
+
+function demoAbuseResult(ip) {
+  const score = Math.floor(Math.random()*100);
+  return {
+    data: {
+      abuseConfidenceScore: score,
+      totalReports: Math.floor(score/2),
+      isp: 'Demo Internet Services',
+      countryCode: 'BR',
+      hostnames: []
+    }
+  };
+}
+
+function demoCVEResult(q) {
+  return [{
+    cve: {
+      id: 'CVE-2024-DEMO',
+      descriptions: [{ lang: 'en', value: `Demonstração: vulnerabilidade crítica relacionada a "${q}". Em modo demo, os dados são simulados. Configure acesso à internet para resultados reais do NIST NVD.` }],
+      published: new Date().toISOString(),
+      metrics: { cvssMetricV31: [{ cvssData: { baseScore: 9.8, baseSeverity: 'CRITICAL' } }] }
+    }
+  }];
+}
+
+// ======================== DEMO RUNNER ========================
+function runDemo(type) {
+  if (type === 'url') {
+    goto('url');
+    document.getElementById('url-input').value = 'https://phishing-example-test.malware.com/login';
+    setTimeout(analyzeURL, 300);
+  } else if (type === 'hash') {
+    goto('hash');
+    document.getElementById('hash-input').value = '44d88612fea8a8f36de82e1278abb02f';
+    setTimeout(analyzeHash, 300);
+  } else if (type === 'ip') {
+    goto('ip');
+    document.getElementById('ip-input').value = '185.220.101.34';
+    setTimeout(analyzeIP, 300);
+  } else if (type === 'cve') {
+    goto('cve');
+    document.getElementById('cve-input').value = 'CVE-2021-44228';
+    setTimeout(searchCVE, 300);
+  }
+}
+</script>
+</body>
+</html>
